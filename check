@@ -1,3 +1,4 @@
+1)
 SELECT 
     e.LAST_NAME AS Employee_Last_Name,
     d.DEPARTMENT_NAME AS Department_Name,
@@ -12,7 +13,21 @@ JOIN
 WHERE 
     e.COMMISSION_PCT IS NOT NULL;
 
-2.	Выведите список всех должностей в отделе 80 (должности в списке не должны повторяться) и местоположение.
+2)
+SELECT DISTINCT 
+    j.JOB_TITLE AS Job_Title,
+    l.CITY AS City,
+    l.STREET_ADDRESS AS Location_Address
+FROM 
+    EMPLOYEES e
+JOIN 
+    JOBS j ON e.JOB_ID = j.JOB_ID
+JOIN 
+    DEPARTMENTS d ON e.DEPARTMENT_ID = d.DEPARTMENT_ID
+JOIN 
+    LOCATIONS l ON d.LOCATION_ID = l.LOCATION_ID
+WHERE 
+    d.DEPARTMENT_ID = 80;
 3.	Вывести фамилии служащих, содержащие буквы «а» (в строчном регистре), с названиями отделов.
 4.	Напишите запрос для вывода фамилии, должности, номера отдела и названия отдела всех служащих, работающих в городе Toronto.
 5.	Вывести фамилии и номера служащих вместе с фамилиями и номерами их менеджеров. Назовите столбцы Employee, Emp#, Manager, MGR#.
