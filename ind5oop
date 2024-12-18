@@ -1,0 +1,131 @@
+package Individual_5;
+import java.util.*;
+public class Main {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        FlightGroup fg = new FlightGroup();
+
+        System.out.print("Введите количество рейсов: ");
+        int n = sc.nextInt();
+        sc.nextLine();
+
+        for (int i = 0; i < n; i++) {
+            System.out.print("Введите номер рейса: ");
+            String flightNumber = sc.nextLine();
+
+            System.out.print("Введите пункт отправления: ");
+            String departure = sc.nextLine();
+
+            System.out.print("Введите пункт прибытия: ");
+            String arrival = sc.nextLine();
+
+            System.out.print("Введите время в пути (часы): ");
+            int travelTime = sc.nextInt();
+
+            System.out.print("Введите расстояние между пунктами (км): ");
+            int distance = sc.nextInt();
+
+            sc.nextLine();
+            System.out.print("Введите тип самолета: ");
+            String aircraftType = sc.nextLine();
+
+            System.out.print("Введите цену билета (рубли): ");
+            double ticketPrice = sc.nextDouble();
+            sc.nextLine();
+
+            Flight flight = new Flight(flightNumber, departure, arrival, travelTime, distance, aircraftType, ticketPrice);
+            fg.add(flight);
+        }
+
+        double averagePrice = fg.calculateAveragePrice();
+        System.out.println("\nСредняя цена билета: " + averagePrice + " руб.");
+
+        System.out.println("\nСписок рейсов, цена которых отличается от средней не более чем на 1000 рублей:");
+        fg.printFlightsWithinPriceRange(1000);
+    }
+}
+
+
+
+
+package Individual_5;
+import java.util.*;
+
+public class Flight {
+    private String flightNumber, departure, arrival, aircraftType;
+    private int travelTime, distance;
+    private double ticketPrice;
+
+    public Flight(String flightNumber, String departure, String arrival, int travelTime, int distance, String aircraftType, double ticketPrice) {
+        this.flightNumber = flightNumber;
+        this.departure = departure;
+        this.arrival = arrival;
+        this.travelTime = travelTime;
+        this.distance = distance;
+        this.aircraftType = aircraftType;
+        this.ticketPrice = ticketPrice;
+    }
+
+    public String getFlightNumber() {
+        return flightNumber;
+    }
+
+    public double getTicketPrice() {
+        return ticketPrice;
+    }
+
+    @Override
+    public String toString() {
+        return "Рейс: " + flightNumber + "\nОтправление: " + departure + "\nПрибытие: " + arrival +
+                "\nВремя в пути: " + travelTime + " часов\nРасстояние: " + distance + " км\nТип самолета: " + aircraftType +
+                "\nЦена билета: " + ticketPrice + " руб.\n";
+    }
+}
+
+
+
+
+
+package Individual_5;
+import java.util.Comparator;
+import java.util.ArrayList;
+import java.util.Collections;
+
+class FlightGroup {
+    private ArrayList<Flight> flights;
+
+    public FlightGroup() {
+        flights = new ArrayList<>();
+    }
+
+    public void add(Flight flight) {
+        flights.add(flight);
+    }
+
+    public void printFlightsWithinPriceRange(double priceRange) {
+        double averagePrice = calculateAveragePrice();
+
+        ArrayList<Flight> filteredFlights = new ArrayList<>();
+        for (Flight flight : flights) {
+            if (Math.abs(flight.getTicketPrice() - averagePrice) <= priceRange) {
+                filteredFlights.add(flight);
+            }
+        }
+
+        //сортировка по алфавиту
+        Collections.sort(filteredFlights, new Comparator<Flight>() {
+            @Override
+            public int compare(Flight f1, Flight f2) {
+                return f1.getFlightNumber().compareToIgnoreCase(f2.getFlightNumber());
+            }
+        });
+    }
+
+    public double calculateAveragePrice() {
+        double total = 0;
+        for (Flight flight : flights) {
+            total += flight.getTicketPrice();
+        }
+        return flights.size() > 0 ? total / flights.size() : 0;
+    }
+}
