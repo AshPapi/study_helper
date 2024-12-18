@@ -1,0 +1,76 @@
+//1.    Вывести список всех сотрудников, получающих зарплату выше средней по своему отделу.
+SELECT
+    e.employee_id,
+    e.first_name,
+    e.last_name,
+    e.salary,
+    e.department_id
+FROM
+    employees e
+WHERE
+    e.salary > (
+        SELECT
+            AVG(e2.salary)
+        FROM
+            employees e2
+        WHERE
+            e2.department_id = e.department_id
+    );
+
+
+//2	Создать функцию, которая проверяет, является ли год високосным.
+//определение високосного года: если номер года делится на 4. Если год делится на 100, то он не високосный, НО если на 400, то високосный
+CREATE OR REPLACE FUNCTION is_leap_year (year_in NUMBER)
+RETURN VARCHAR2
+IS
+BEGIN
+    IF (MOD(year_in, 4) = 0 AND MOD(year_in, 100) != 0) 
+       OR MOD(year_in, 400) = 0 THEN
+        RETURN 'YES';
+    ELSE
+        RETURN 'NO';
+    END IF;
+END;
+/
+
+SELECT is_leap_year(2024) AS RESULT FROM DUAL;      //AS RESULT FROM DUAL, тк не требуются данные из таблицы
+SELECT is_leap_year(2023) AS RESULT FROM DUAL;      //не делится на 4, на 100 и на 400
+
+
+//3.	Создать процедуру, которая добавляет новую страну в таблицу countries.
+CREATE OR REPLACE PROCEDURE add_country (
+    new_country_id   VARCHAR2,
+    new_country_name VARCHAR2,
+    new_region_id    NUMBER
+)
+IS
+BEGIN
+    INSERT INTO COUNTRIES (COUNTRY_ID, COUNTRY_NAME, REGION_ID)
+    VALUES (new_country_id, new_country_name, new_region_id);
+    
+    COMMIT;     //фиксирует изменения в бд
+END;
+/
+
+
+//пример вызова процедуры
+BEGIN
+    add_country('RU', 'Russia', 1);
+END;
+/
+
+//возвращаем исходное
+DELETE FROM COUNTRIES
+WHERE COUNTRY_ID = 'RU';
+COMMIT;
+
+
+//4.	Создать триггер, который автоматически заполняет поле min_salary значением 0 при вставке новой должности в таблицу jobs, если оно не указано.
+CREATE OR REPLACE TRIGGER trg_set_min_salary BEFORE                   //триггер срабатывает перед вставкой строки
+    INSERT ON jobs              //триггер обрабатывает каждую вставляемую строку отдельно
+FOR EACH ROW                        
+BEGIN
+    IF :NEW.MIN_SALARY IS NULL THEN //если поле MIN_SALARY пустое, то оно заполнится нулём :new.min_salary := 0;
+END IF;
+END;
+/
