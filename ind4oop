@@ -1,0 +1,237 @@
+import java.util.*;
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+
+        System.out.print("Выберите тип данных (1: Integer, 2: Double): ");
+        int choice = scanner.nextInt();
+
+        if (choice == 1) {
+            // для Integer
+            System.out.println("Координаты прямоугольника (x1, y1, x2, y2, x3, y3, x4, y4): ");
+            Rectangle<Integer> rectangle = new Rectangle<>(
+                    "Прямоугольник",
+                    scanner.nextInt(), scanner.nextInt(),
+                    scanner.nextInt(), scanner.nextInt(),
+                    scanner.nextInt(), scanner.nextInt(),
+                    scanner.nextInt(), scanner.nextInt()
+            );
+
+            System.out.println("Координаты пятиугольника (x1, y1, x2, y2, x3, y3, x4, y4, x5, y5):");
+            Pentagon<Integer> pentagon = new Pentagon<>(
+                    "Пятиугольник",
+                    scanner.nextInt(), scanner.nextInt(),
+                    scanner.nextInt(), scanner.nextInt(),
+                    scanner.nextInt(), scanner.nextInt(),
+                    scanner.nextInt(), scanner.nextInt(),
+                    scanner.nextInt(), scanner.nextInt()
+            );
+
+            // Вывод площади
+            System.out.println("Площадь прямоугольника: " + rectangle.getArea());
+            System.out.println("Площадь пятиугольника: " + pentagon.getArea());
+
+            // методы для объектов
+            Shape<Rectangle<Integer>, Pentagon<Integer>> method = new Shape<>();
+
+            // сравнение площади
+            int comparison = method.compare(rectangle, pentagon);
+            if (comparison > 0) {
+                System.out.println("Площадь прямоугольника больше, чем площадь пятиугольника.");
+            } else if (comparison < 0) {
+                System.out.println("Площадь пятиугольника больше, чем площадь прямоугольника.");
+            } else {
+                System.out.println("Площадь прямоугольника и пятиугольника одинакова.");
+            }
+
+            // проверка включения
+            boolean isIncluded = method.isInclude(rectangle, pentagon);
+            if (isIncluded) {
+                System.out.println("Пятиугольник полностью находится внутри прямоугольника.");
+            } else {
+                System.out.println("Пятиугольник не полностью находится внутри прямоугольника.");
+            }
+        } else if (choice == 2) {
+            // для Double
+            System.out.println("Координаты прямоугольника (x1, y1, x2, y2, x3, y3, x4, y4):");
+            Rectangle<Double> rectangle = new Rectangle<>(
+                    "Прямоугольник",
+                    scanner.nextDouble(), scanner.nextDouble(),
+                    scanner.nextDouble(), scanner.nextDouble(),
+                    scanner.nextDouble(), scanner.nextDouble(),
+                    scanner.nextDouble(), scanner.nextDouble()
+            );
+
+            System.out.println("Координаты пятиугольника (x1, y1, x2, y2, x3, y3, x4, y4, x5, y5):");
+            Pentagon<Double> pentagon = new Pentagon<>(
+                    "Пятиугольник",
+                    scanner.nextDouble(), scanner.nextDouble(),
+                    scanner.nextDouble(), scanner.nextDouble(),
+                    scanner.nextDouble(), scanner.nextDouble(),
+                    scanner.nextDouble(), scanner.nextDouble(),
+                    scanner.nextDouble(), scanner.nextDouble()
+            );
+
+            // вывод площади
+            System.out.println("Площадь прямоугольника: " + rectangle.getArea());
+            System.out.println("Площадь пятиугольника: " + pentagon.getArea());
+
+            // методы для объектов
+            Shape<Rectangle<Double>, Pentagon<Double>> method = new Shape<>();
+
+            // сравнение площади
+            int comparison = method.compare(rectangle, pentagon);
+            if (comparison > 0) {
+                System.out.println("Площадь прямоугольника больше, чем площадь пятиугольника.");
+            } else if (comparison < 0) {
+                System.out.println("Площадь пятиугольника больше, чем площадь прямоугольника.");
+            } else {
+                System.out.println("Площадь прямоугольника и пятиугольника одинакова.");
+            }
+
+            // проверка включения
+            boolean isIncluded = method.isInclude(rectangle, pentagon);
+            if (isIncluded) {
+                System.out.println("Пятиугольник полностью находится внутри прямоугольника.");
+            } else {
+                System.out.println("Пятиугольник не полностью находится внутри прямоугольника.");
+            }
+        } else {
+            System.out.println("Неверный выбор типа данных.");
+        }
+    }
+}
+
+
+
+
+//T2
+class Pentagon<T extends Number> {
+    private String id;
+    private T x1, y1, x2, y2, x3, y3, x4, y4, x5, y5; //точки вершин
+
+    public Pentagon(String id, T x1, T y1, T x2, T y2, T x3, T y3, T x4, T y4, T x5, T y5) {
+        this.id = id;
+        this.x1 = x1;
+        this.y1 = y1;
+        this.x2 = x2;
+        this.y2 = y2;
+        this.x3 = x3;
+        this.y3 = y3;
+        this.x4 = x4;
+        this.y4 = y4;
+        this.x5 = x5;
+        this.y5 = y5;
+    }
+
+    // получение вершин
+    public T getX1() { return x1; }
+    public T getY1() { return y1; }
+    public T getX2() { return x2; }
+    public T getY2() { return y2; }
+    public T getX3() { return x3; }
+    public T getY3() { return y3; }
+    public T getX4() { return x4; }
+    public T getY4() { return y4; }
+    public T getX5() { return x5; }
+    public T getY5() { return y5; }
+
+    // площадь
+    public double getArea() {
+        // преобразование в double
+        double x1 = this.x1.doubleValue();
+        double y1 = this.y1.doubleValue();
+        double x2 = this.x2.doubleValue();
+        double y2 = this.y2.doubleValue();
+        double x3 = this.x3.doubleValue();
+        double y3 = this.y3.doubleValue();
+        double x4 = this.x4.doubleValue();
+        double y4 = this.y4.doubleValue();
+        double x5 = this.x5.doubleValue();
+        double y5 = this.y5.doubleValue();
+
+        // Формула Шоелеса для площади
+        return Math.abs(x1 * y2 + x2 * y3 + x3 * y4 + x4 * y5 + x5 * y1 - (y1 * x2 + y2 * x3 + y3 * x4 + y4 * x5 + y5 * x1)) / 2;
+    }
+}
+
+
+
+//T1
+class Rectangle<T extends Number> {
+    private String id;
+    private T x1, y1, x2, y2, x3, y3, x4, y4;   //точки вершин
+
+    public Rectangle(String id, T x1, T y1, T x2, T y2, T x3, T y3, T x4, T y4) {
+        this.id = id;
+        this.x1 = x1;
+        this.y1 = y1;
+        this.x2 = x2;
+        this.y2 = y2;
+        this.x3 = x3;
+        this.y3 = y3;
+        this.x4 = x4;
+        this.y4 = y4;
+    }
+
+    // получение вершин
+    public T getX1() { return x1; }
+    public T getX2() { return x2; }
+    public T getX3() { return x3; }
+    public T getX4() { return x4; }
+    public T getY1() { return y1; }
+    public T getY2() { return y2; }
+    public T getY3() { return y3; }
+    public T getY4() { return y4; }
+
+    // площадь
+    public double getArea() {
+        double side1 = Math.sqrt(Math.pow(x2.doubleValue() - x1.doubleValue(), 2) + Math.pow(y2.doubleValue() - y1.doubleValue(), 2));
+        double side2 = Math.sqrt(Math.pow(x3.doubleValue() - x2.doubleValue(), 2) + Math.pow(y3.doubleValue() - y2.doubleValue(), 2));
+        return side1 * side2;
+    }
+}
+
+
+
+
+// доп.класс для проверки фигур
+class Shape<T1 extends Rectangle<? extends Number>, T2 extends Pentagon<? extends Number>> {
+
+    // сравнение объектов по площади
+    public int compare(T1 rect, T2 pent) {
+        return Double.compare(rect.getArea(), pent.getArea());
+    }
+
+    // проверка включения пятиугольника в прямоугольник
+    public boolean isInclude(T1 rect, T2 pent) {
+        // проверяем каждую из пяти вершин с помощью isPointInsideRectangle
+        return isPointInsideRectangle(rect, pent.getX1(), pent.getY1())
+                && isPointInsideRectangle(rect, pent.getX2(), pent.getY2())
+                && isPointInsideRectangle(rect, pent.getX3(), pent.getY3())
+                && isPointInsideRectangle(rect, pent.getX4(), pent.getY4())
+                && isPointInsideRectangle(rect, pent.getX5(), pent.getY5());
+    }
+    // проверяет, лежит ли заданная точка внутри прямоугольника.
+    private boolean isPointInsideRectangle(T1 rect, Number x, Number y) {
+        // вычисляем границы прямоугольника, left и right определяют минимальную и максимальную координаты Х
+        // bottom и top определяют минимальную и максимальную координаты У
+        double left = Math.min(rect.getX1().doubleValue(), rect.getX3().doubleValue());
+        double right = Math.max(rect.getX1().doubleValue(), rect.getX3().doubleValue());
+        double bottom = Math.min(rect.getY1().doubleValue(), rect.getY3().doubleValue());
+        double top = Math.max(rect.getY1().doubleValue(), rect.getY3().doubleValue());
+
+        // преобразуем в double для проверки:
+        double px = x.doubleValue();
+        double py = y.doubleValue();
+
+        //  проверяем, находится ли точка внутри прямоугольника:
+        // - px должно быть между left и right
+        // - py должно быть между bottom и top
+        return px >= left && px <= right && py >= bottom && py <= top;
+    }
+}
+
+
+------------------------------------------------------------------------------------------------
