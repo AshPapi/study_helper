@@ -1,0 +1,41 @@
+#include <chrono>
+#include <iostream>
+using namespace std;
+using namespace std::chrono;
+ 
+int main() {
+   int n;
+   cin >> n;
+   int **matrix = new int*[n];                //создание матрицы и её заполнение
+   for (int i = 0; i < n; i++) {
+       matrix[i] = new int[n];
+   }
+   for (int i = 0; i < n; i++) {
+       for (int j = 0; j < n; j++) {
+           matrix[i][j] = 1;
+       }
+   }
+   int *vector = new int[n];                  //создание вектора и его заполнение
+   for (int i = 0; i < n; i++) {
+       vector[i] = 2;
+   }
+   auto t0 = high_resolution_clock::now();     //запускаем таймер
+   for (int i = 0; i < n; i++) {               //перемножаем элементы вектора на элементы матрицы и получаем новые значения в матрице
+       for (int j = 0; j < n; j++) {
+           matrix[i][j] *= vector[i];
+       }
+   }
+   for (int i = 0; i < n; i++) vector[i] = 0;  //обнуляем элементы вектора для записи новых ответов
+   for (int i = 0; i < n; i++) {
+       for (int j = 0; j < n; j++) {
+           vector[i] += matrix[i][j];         //записываем в вектор сумму значений строки, которые получились в матрице
+       }
+   }
+   auto t1 = high_resolution_clock::now();     //выключаем таймер
+   cout << endl;
+   for (int i = 0; i < n; i++) {
+       cout << vector[i] << " ";
+   }
+   cout << endl;
+   cout << duration_cast<milliseconds>(t1 - t0).count() << " msec\n"; //вывод времени работы вычислений
+}
