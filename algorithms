@@ -10,18 +10,14 @@ int main() {
         for (int i = 0; i < n; i++) {
             matrix[i] = new int[n];
         }
-
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < n; j++) {
                 matrix[i][j] = 1;
-                operation_counter++;
             }
         }
-
         int* vector = new int[n];                  //создание вектора и его заполнение
         for (int i = 0; i < n; i++) {
             vector[i] = 2;
-            operation_counter++;
         }
 
         for (int i = 0; i < n; i++) {               //перемножаем элементы вектора на элементы матрицы и получаем новые значения в матрице
@@ -38,7 +34,6 @@ int main() {
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < n; j++) {
                 vector[i] += matrix[i][j];         //записываем в вектор сумму значений строки, которые получились в матрице
-                operation_counter += 2;
             }
         }
 
