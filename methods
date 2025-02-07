@@ -1,0 +1,36 @@
+#include <iostream>
+using namespace std;
+
+double factorial(int n) {
+	double answer = 1;
+	for (int i = 1; i <= n; i++) {
+		answer *= i;
+	}
+	return answer;
+}
+
+double PI = 3.14159265358979323846;
+const double first_part = 2 / sqrt(PI); //часть до суммы ряда
+
+int main()
+{
+	double answers[5];
+	double x = 0.5; // начальный х 
+	double full_sum = 0.0; // получаемый ответ
+	int index = 0;
+	while (x <= 10) {
+		for (int n = 0; n < 9; n++) {
+			double first_elem = pow(-1, n);
+			double second_elem = pow(x, ((2 * n) + 1));
+			double third_elem = factorial(n);
+			double fourth_elem = (2 * n) + 1;
+			full_sum += (first_elem * second_elem) / third_elem * fourth_elem;
+		}
+		answers[index] = full_sum * first_part;
+		index++;
+		if (index > 5) break;
+		cin >> x;
+	}
+	for(int i = 0; i<5;i++)
+		cout << answers[i] << endl;
+}
