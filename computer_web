@@ -1,0 +1,42 @@
+#include <fstream>
+#include <iostream>
+#include <thread>
+#include <chrono>
+
+using namespace std;
+
+int main() {
+    setlocale(LC_ALL, "rus");
+
+    ifstream file("abc.txt");
+    if (!file) {
+        cout << "Файл не открыт\n\n";
+    }
+    else {
+        cout << "Все ОК! Файл открыт!\n\n";
+    }
+
+    file.seekg(0, ios::end);
+    int s1 = file.tellg();
+    int s2 = s1;
+    file.close();
+
+    while (s1 == s2) {
+        this_thread::sleep_for(chrono::seconds(2));
+        cout << "Файл тот же!" << endl;
+        this_thread::sleep_for(chrono::seconds(3));
+
+        ifstream file("abc.txt");
+        file.seekg(0, ios::end);
+        s2 = file.tellg();
+        file.close();
+
+        if (s2 != s1) {
+            cout << "Файл изменён!" << endl;
+        }
+
+        s1 = s2;
+    }
+
+    return 0;
+}
