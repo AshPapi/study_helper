@@ -2,8 +2,9 @@
 #include <iostream>
 #include <thread>
 #include <chrono>
-
+#include <string>
 using namespace std;
+
 
 int main() {
     setlocale(LC_ALL, "rus");
@@ -15,20 +16,49 @@ int main() {
     else {
         cout << "Все ОК! Файл открыт!\n\n";
     }
-
+    
+    //размер начального файла
     file.seekg(0, ios::end);
     int s1 = file.tellg();
     int s2 = s1;
     file.close();
 
     while (s1 == s2) {
-        this_thread::sleep_for(chrono::seconds(2));
-        cout << "Файл тот же!" << endl;
-        this_thread::sleep_for(chrono::seconds(3));
-
         ifstream file("abc.txt");
-        file.seekg(0, ios::end);
-        s2 = file.tellg();
+        
+        //запись всего текста в одну строку!
+        string temp = "";
+        string firstTime = "";
+        getline(file, temp, '\0');
+       
+        for (char c : temp) {
+            if (c != ' ' && c != '\n' && c != '\r') {
+                firstTime += c;
+            }
+        }
+        temp = "";
+        file.close();
+        cout << firstTime;
+
+        //задержка для того чтобы поменять файл
+        this_thread::sleep_for(chrono::seconds(5));
+
+        //запись всего текста в одну строку, НО после изменения файла
+        file.open("abc.txt");
+        file.clear();
+        string secondTime = "";
+        getline(file, temp, '\0');
+
+        for (char c : temp) {
+            if (c != ' ' && c != '\n' && c != '\r') {
+                secondTime += c;
+            }
+        }
+        temp = "";
+        file.close();
+        cout << secondTime;
+
+        string difference = firstTime;
         file.close();
 
         if (s2 != s1) {
