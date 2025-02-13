@@ -1,36 +1,126 @@
 #include <iostream>
+#include <cmath>
+#include <iomanip>
 using namespace std;
 
-double factorial(int n) {
-	double answer = 1;
-	for (int i = 1; i <= n; i++) {
-		answer *= i;
-	}
-	return answer;
-}
+// ЛАБОРАТНОРАЯ РАБОТА 1
+// ЗАДАНИЕ 1
+// Функция для вычисления erf через ряд Тейлора
+//double func(double x) {
+//    const double PI = acos(-1.0);
+//    const double first_part = 2.0 / sqrt(PI);
+//
+//    double full_sum = 0.0; // сумма всех членов ряда
+//    double term = x;       // текущий член ряда
+//    int n = 0;             // итерация в ряде
+//
+//    do {
+//        full_sum += term; // добавляем текущий член к общей сумме
+//        n++;
+//        term *= -x * x * (2 * n - 1) / (n * (2 * n + 1)); // обновляем текущий член ряда
+//    } while (fabs(term) > 1e-10); // будет выполняться, пока текущий член ряда больше эпсилон
+//
+//    return first_part * full_sum; // итоговая сумма ряда
+//}
+//
+//int main() {
+//    double xs[4] = { 0.5, 1.0, 5.0, 10.0 }; // массив иксов
+//
+//    // красивый вывод
+//    cout << fixed << setprecision(10); // 10 знаков после запятой
+//
+//
+//    cout << setw(8) << "x" << " | "
+//        << setw(16) << "(func)" << " | "
+//        << setw(16) << "(std::erf)" << " | "
+//        << setw(16) << "Difference" << endl;
+//
+//    cout << string(60, '-') << endl;
+//
+//
+//    for (int i = 0; i < 4; ++i) {
+//        double result_func = func(xs[i]);       // результат func 
+//        double result_erf = erf(xs[i]);         // Результат erf из стандартной библиотеки
+//        double difference = fabs(result_func - result_erf); // Разница между func и erf
+//
+//        cout << setw(8) << xs[i] << " | "
+//            << setw(16) << result_func << " | "
+//            << setw(16) << result_erf << " | "
+//            << setw(16) << difference << endl;
+//    }
+//
+//    return 0;
+//}
 
-double PI = 3.14159265358979323846;
-const double first_part = 2 / sqrt(PI); //часть до суммы ряда
 
-int main()
-{
-	double answers[5];
-	double x = 0.5; // начальный х 
-	double full_sum = 0.0; // получаемый ответ
-	int index = 0;
-	while (x <= 10) {
-		for (int n = 0; n < 9; n++) {
-			double first_elem = pow(-1, n);
-			double second_elem = pow(x, ((2 * n) + 1));
-			double third_elem = factorial(n);
-			double fourth_elem = (2 * n) + 1;
-			full_sum += (first_elem * second_elem) / third_elem * fourth_elem;
-		}
-		answers[index] = full_sum * first_part;
-		index++;
-		if (index > 5) break;
-		cin >> x;
-	}
-	for(int i = 0; i<5;i++)
-		cout << answers[i] << endl;
-}
+// ЗАДАНИЕ 2
+// Функция для вычисления суммы ряда phi(x) с заданной точностью - epsilon
+//double phi(double x, double epsilon) {
+//    double sum = 0.0;  // инициализация суммы ряда
+//    double term;       // переменная для хранения текущего члена ряда
+//    int k = 1;         // начальное значение индекса k
+//
+//    // цикл для вычисления суммы ряда до тех пор, пока модуль текущего члена больше epsilon
+//    do {
+//        term = 1.0 / (k * (k + x));  // вычисление текущего члена ряда
+//        sum += term;                 // добавление текущего члена к сумме
+//        k++;                         
+//    } while (fabs(term) > epsilon);  // проверка условия завершения цикла
+//
+//    return sum;  
+//}
+//
+//// с использованием соотношения 1/(k*(k+1)) = 1/k - 1/(k+1)
+//double phi_1(double epsilon) {
+//    double sum = 0.0;  
+//    double term;       
+//    int k = 1;        
+//
+//
+//    do {
+//        term = 1.0 / k - 1.0 / (k + 1);  
+//        sum += term;                     
+//        k++;                            
+//    } while (fabs(term) > epsilon);      
+//
+//    return sum;  
+//}
+//
+//// для вычисления разности phi(x) - phi(1) с использованием более быстро сходящегося ряда
+//double phi_diff(double x, double epsilon) {
+//    double sum = 0.0;  
+//    double term;       
+//    int k = 1;         
+//
+//    do {
+//        term = (1.0 - x) / (k * (k + x) * (k + 1));  //упростили выражение phi(x) - phi(1) 
+//        sum += term;                                 
+//        k++;                                         
+//    } while (fabs(term) > epsilon);                  
+//
+//    return sum;  
+//}
+//
+//int main() {
+//    double epsilon = 0.5e-8;  // допустимая ошибка
+//
+//    cout << "x from 0.1 to 1" << endl;
+//    for (double x = 0.0; x <= 1.0; x += 0.1) {
+//        double result = phi(x, epsilon);  
+//        cout << "phi(" << x << ") = " << result << endl;  
+//    }
+//
+//    cout << endl << "proof using the ratio:" << endl;
+//    double phi_1_result = phi_1(epsilon);
+//    cout << "phi(1) = " << phi_1_result << endl << endl;
+//
+//    cout << "phi(x) - phi(1):" << endl;
+//    for (double x = 0.0; x <= 1.0; x += 0.1) {
+//        double diff = phi_diff(x, epsilon);
+//        cout << "phi(" << x << ") - phi(1) = " << diff << endl;
+//    }
+//
+//    //отклонения связаны с численными погрешностями из-за конечного числа итераций
+//}
+
+//ЗАДАНИЕ 3
