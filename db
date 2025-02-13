@@ -1,0 +1,85 @@
+CREATE 
+(r1:Recept {id:1, patient_id:1, doctor_id:1, pharmacy_id:1, date_of_start:'01.01.2025', date_of_end:'01.01.2026', status:'active'}),
+(r2:Recept {id:2, patient_id:2, doctor_id:2, pharmacy_id:2, date_of_start:'10.10.2004', date_of_end:'10.10.2006', status:'expired'}),
+(r3:Recept {id:3, patient_id:3, doctor_id:3, pharmacy_id:3, date_of_start:'05.05.1999', date_of_end:'05.05.2001', status:'expired'}),
+(r4:Recept {id:4, patient_id:4, doctor_id:4, pharmacy_id:4, date_of_start:'15.07.2023', date_of_end:'15.07.2025', status:'active'}),
+(r5:Recept {id:5, patient_id:5, doctor_id:5, pharmacy_id:5, date_of_start:'20.12.2020', date_of_end:'20.12.2022', status:'expired'})
+
+CREATE 
+(aibolit:Doctor {id:1, name:'Aibolit', qualife:'Therapist', exp_by_years:5, hospital:'Sochi Hospital'}),
+(mechnikov:Doctor {id:2, name:'Mechnikov', qualife:'Surgeon', exp_by_years:10, hospital:'Krasnodar Clinic'}),
+(archimed:Doctor {id:3, name:'Archimed', qualife:'ENT', exp_by_years:2000, hospital:'Fomins Center'}),
+(hippocrates:Doctor {id:4, name:'Hippocrates', qualife:'Pediatrician', exp_by_years:2001, hospital:'Children Clinic'}),
+(pasteur:Doctor {id:5, name:'Pasteur', qualife:'Infectious Disease Specialist', exp_by_years:200, hospital:'France Hospital'})
+
+CREATE 
+(zdorove:Manufacturer {id:1, name:'Zdorove', country:'Russia', date_of_create:'22.08.2005', city:'Moscow'}),
+(teplo:Manufacturer {id:2, name:'Teplo', country:'Belarus', date_of_create:'01.08.2006', city:'Minsk'}),
+(dobro:Manufacturer {id:3, name:'Dobro', country:'Russia', date_of_create:'19.03.1986', city:'Saint Petersburg'}),
+(new_health:Manufacturer {id:4, name:'NewHealth', country:'Norway', date_of_create:'10.10.1995', city:'Oslo'}),
+(hearts:Manufacturer {id:5, name:'Hearts', country:'Kazakhstan', date_of_create:'05.05.2010', city:'Almaty'})
+
+CREATE 
+(aspirin:Pharmacy {id:1, name:'Aspirin', type:'Painkiller', dosage:'500 mg', price:100}),
+(ibuprofen:Pharmacy {id:2, name:'Ibuprofen', type:'Painkiller', dosage:'400 mg', price:150}),
+(nurofen:Pharmacy {id:3, name:'Nurofen', type:'Painkiller', dosage:'200 mg', price:200}),
+(paracetamol:Pharmacy {id:4, name:'Paracetamol', type:'Painkiller', dosage:'100 mg', price:50}),
+(analgin:Pharmacy {id:5, name:'Analgin', type:'Painkiller', dosage:'250 mg', price:120})
+
+CREATE 
+(ashot:Patient {id:1, name:'Ashot', age:19, sex:'male', disease:'fever', insurance:'ultra'}),
+(andrey:Patient {id:2, name:'Andrey', age:15, sex:'male', disease:'headache', insurance:'basic'}),
+(anna:Patient {id:3, name:'Anna', age:35, sex:'female', disease:'nausea', insurance:'basic'}),
+(ivan:Patient {id:4, name:'Ivan', age:28, sex:'male', disease:'cough', insurance:'basic'}),
+(maria:Patient {id:5, name:'Maria', age:40, sex:'female', disease:'hypertension', insurance:'basic'})
+
+WITH*
+MATCH (zdorove:Manufacturer {id:1}), (aspirin:Pharmacy {id:1})
+CREATE (zdorove)-[:PRODUCES]->(aspirin)
+
+WITH*
+MATCH (teplo:Manufacturer {id:2}), (ibuprofen:Pharmacy {id:2})
+CREATE (teplo)-[:PRODUCES]->(ibuprofen)
+
+WITH*
+MATCH (dobro:Manufacturer {id:3}), (nurofen:Pharmacy {id:3})
+CREATE (dobro)-[:PRODUCES]->(nurofen)
+
+WITH*
+MATCH (new_health:Manufacturer {id:4}), (paracetamol:Pharmacy {id:4})
+CREATE (new_health)-[:PRODUCES]->(paracetamol)
+
+WITH*
+MATCH (hearts:Manufacturer {id:5}), (analgin:Pharmacy {id:5})
+CREATE (hearts)-[:PRODUCES]->(analgin)
+
+WITH*
+MATCH (r1:Recept {id:1}), (ashot:Patient {id:1}), (aibolit:Doctor {id:1}), (aspirin:Pharmacy {id:1})
+CREATE (r1)-[:BELONGS_TO]->(ashot),
+       (r1)-[:ASSIGNED_BY]->(aibolit),
+       (r1)-[:CONTAINS]->(aspirin)
+
+WITH*
+MATCH (r2:Recept {id:2}), (andrey:Patient {id:2}), (mechnikov:Doctor {id:2}), (ibuprofen:Pharmacy {id:2})
+CREATE (r2)-[:BELONGS_TO]->(andrey),
+       (r2)-[:ASSIGNED_BY]->(mechnikov),
+       (r2)-[:CONTAINS]->(ibuprofen)
+
+WITH*
+MATCH (r3:Recept {id:3}), (anna:Patient {id:3}), (archimed:Doctor {id:3}), (nurofen:Pharmacy {id:3})
+CREATE (r3)-[:BELONGS_TO]->(anna),
+       (r3)-[:ASSIGNED_BY]->(archimed),
+       (r3)-[:CONTAINS]->(nurofen)
+
+WITH*
+MATCH (r4:Recept {id:4}), (ivan:Patient {id:4}), (hippocrates:Doctor {id:4}), (paracetamol:Pharmacy {id:4})
+CREATE (r4)-[:BELONGS_TO]->(ivan),
+       (r4)-[:ASSIGNED_BY]->(hippocrates),
+       (r4)-[:CONTAINS]->(paracetamol)
+
+WITH*
+MATCH (r5:Recept {id:5}), (maria:Patient {id:5}), (pasteur:Doctor {id:5}), (analgin:Pharmacy {id:5})
+CREATE (r5)-[:BELONGS_TO]->(maria),
+       (r5)-[:ASSIGNED_BY]->(pasteur),
+       (r5)-[:CONTAINS]->(analgin)
+
