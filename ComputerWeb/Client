@@ -6,16 +6,22 @@
 
 using namespace std;
 
-string filename = "C:\\Users\\s0188242\\source\\repos\\data.txt";  // Файл для записи данных
+string filename = "C:\\Users\\s0188242\\source\\repos\\data.txt";  // Файл для отправки данных
 string logFilename = "C:\\Users\\s0188242\\source\\repos\\log.txt"; // Файл логов
 string file_back = "C:\\Users\\s0188242\\source\\repos\\file_back.txt"; // Файл с ответом от сервера
+
+// Функция очистки file_back.txt перед отправкой новых данных
+void clearFileBack() {
+    ofstream file(file_back, ios::trunc); // Очищаем файл
+    file.close();
+}
 
 // Функция ожидания обновления file_back.txt
 string waitForServerResponse() {
     string lastResponse = "";
-    
+
     while (true) {
-        this_thread::sleep_for(chrono::seconds(1)); // Ожидаем 1 сек перед проверкой
+        this_thread::sleep_for(chrono::milliseconds(500)); // Ждем 500 мс перед проверкой
 
         ifstream file(file_back);
         if (!file) {
@@ -45,6 +51,8 @@ int main() {
             cout << "Выход..." << endl;
             break;
         }
+
+        clearFileBack(); // Очищаем file_back.txt перед отправкой новых данных
 
         // Открываем файл в режиме добавления
         ofstream file(filename, ios::app);
