@@ -7,11 +7,11 @@
 
 using namespace std;
 
-string filename = "C:\\Users\\s0188242\\source\\repos\\data.txt";  // Файл с текущими данными
-string lastContent = "";  // переменная для хранения последнего содержимого файла
-string file_back = "C:\\Users\\s0188242\\source\\repos\\file_back.txt";
+string filename = "C:\\Users\\s0188242\\source\\repos\\data.txt";  // Файл с данными
+string file_back = "C:\\Users\\s0188242\\source\\repos\\file_back.txt"; // Файл для ответа клиенту
+string lastContent = "";  // Переменная для хранения последнего содержимого файла
 
-// Функция для чтения данных из файла
+// Функция для чтения чисел из файла
 vector<int> readNumbersFromFile(const string& filename) {
     ifstream file(filename);
     vector<int> numbers;
@@ -25,13 +25,11 @@ vector<int> readNumbersFromFile(const string& filename) {
     getline(file, content, '\0');
     file.close();
 
-    // проверяем, изменилось ли содержимое файла
     if (content == lastContent) {
-        return {};  // если содержимое не изменилось, просто выходим
+        return {}; // Если содержимое не изменилось, возвращаем пустой вектор
     }
-    lastContent = content;  // обновляем последнее содержимое файла
+    lastContent = content; // Обновляем последнее содержимое файла
 
-    // обрабатываем содержимое файла
     stringstream ss(content);
     while (ss >> temp) {
         try {
@@ -45,7 +43,7 @@ vector<int> readNumbersFromFile(const string& filename) {
     return numbers;
 }
 
-// функция вычисления среднего балла
+// Функция вычисления среднего балла
 double calculateAverage(const vector<int>& numbers) {
     if (numbers.empty()) return 0.0;
     double sum = 0;
@@ -53,30 +51,42 @@ double calculateAverage(const vector<int>& numbers) {
     return sum / numbers.size();
 }
 
+// Функция записи результата в файл file_back.txt
+void writeToFileBack(const string& message) {
+    ofstream file(file_back, ios::trunc); // Перезаписываем файл
+    if (!file) {
+        cout << "Ошибка записи в файл file_back.txt!" << endl;
+        return;
+    }
+    file << message;
+    file.close();
+}
+
 int main() {
     setlocale(LC_ALL, "rus");
-    string info;
-    cout << "Сервер рабоатет..." << endl;
+
+    cout << "Сервер работает..." << endl;
 
     while (true) {
-        this_thread::sleep_for(chrono::seconds(3)); // пауза перед следующей проверкой
+        this_thread::sleep_for(chrono::seconds(3)); // Пауза перед проверкой
 
         vector<int> numbers = readNumbersFromFile(filename);
         if (numbers.empty()) {
-            continue;  // если нет изменений, продолжаем ждать
+            continue; // Если нет изменений, продолжаем ожидание
         }
 
         cout << "\nФайл обновлён!" << endl;
         double avg = calculateAverage(numbers);
 
-        cout << "Средний балл: " << avg << endl;
-
+        string result = "Средний балл: " + to_string(avg) + "\n";
         if (avg > 4.5) {
-            cout << "Студент получает стипендию!" << endl;
+            result += "Студент получает стипендию!";
+        } else {
+            result += "Стипендии нет.";
         }
-        else {
-            cout << "Стипендии нет." << endl;
-        }
+
+        cout << result << endl;
+        writeToFileBack(result); // Записываем результат в file_back.txt
     }
 
     return 0;
