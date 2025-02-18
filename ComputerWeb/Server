@@ -81,7 +81,8 @@ int main() {
         string result = "Средний балл: " + to_string(avg) + "\n";
         if (avg > 4.5) {
             result += "Студент получает стипендию!";
-        } else {
+        }
+        else {
             result += "Стипендии нет.";
         }
 
