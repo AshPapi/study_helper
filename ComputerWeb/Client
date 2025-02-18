@@ -7,20 +7,20 @@ using namespace std;
 int main() {
     setlocale(LC_ALL, "rus");
 
-    string filename = "C:\\Users\\Admin\\source\\repos\\data.txt";  // Основной файл для сервера
-    string logFilename = "C:\\Users\\Admin\\source\\repos\\log.txt"; // Файл для логирования
+    string filename = "C:\\Users\\s0188242\\source\\repos\\data.txt";  // для сервера
+    string logFilename = "C:\\Users\\s0188242\\source\\repos\\log.txt"; // для логов
 
-    while (true) {  // Цикл для повторного ввода
+    while (true) {  
         cout << "\nВведите числа через пробел (или 'exit' для выхода): ";
         string input;
         getline(cin, input);
 
         if (input == "exit") {
-            cout << "Клиент завершает работу..." << endl;
-            break;  // Выход из цикла
+            cout << "Выход..." << endl;
+            break;  
         }
 
-        // Открываем файл КАЖДЫЙ РАЗ перед записью
+        // открываем файл КАЖДЫЙ РАЗ перед записью
         ofstream file(filename);
         if (!file) {
             cout << "Ошибка открытия файла!" << endl;
@@ -28,18 +28,17 @@ int main() {
         }
 
         file << input;
-        file.close();  // Закрываем файл, чтобы сервер увидел изменения
+        file.close();  // закрываем файл, чтобы сервер увидел изменения
 
-        // Логируем данные (добавляем в log.txt, не стирая старые записи)
-        ofstream logFile(logFilename, ios::app); // Открываем в режиме добавления (append)
+        ofstream logFile(logFilename, ios::app); // открываем в режиме добавления (append)
         if (!logFile) {
             cout << "Ошибка открытия файла лога!" << endl;
             return 1;
         }
         logFile << input << endl;
-        logFile.close();  // Закрываем лог-файл
+        logFile.close(); 
 
-        cout << "Данные записаны! Сервер обработает их." << endl;
+        cout << "Данные записаны!" << endl;
     }
 
     return 0;
