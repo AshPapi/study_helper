@@ -20,17 +20,18 @@ int main() {
             break;  
         }
 
-        // открываем файл КАЖДЫЙ РАЗ перед записью
-        ofstream file(filename);
+        // Открываем файл в режиме добавления
+        ofstream file(filename, ios::app);
         if (!file) {
             cout << "Ошибка открытия файла!" << endl;
             return 1;
         }
 
-        file << input;
-        file.close();  // закрываем файл, чтобы сервер увидел изменения
+        file << input << endl; // Записываем данные и добавляем перевод строки
+        file.close();  
 
-        ofstream logFile(logFilename, ios::app); // открываем в режиме добавления (append)
+        // Открываем лог-файл в режиме добавления
+        ofstream logFile(logFilename, ios::app);
         if (!logFile) {
             cout << "Ошибка открытия файла лога!" << endl;
             return 1;
