@@ -124,3 +124,103 @@ using namespace std;
 //}
 
 //ЗАДАНИЕ 3
+//сделал
+
+//ЗАДАНИЕ 4
+//сделал
+
+//ЛАБОРАТОРНАЯ 2
+// Функция для решения квадратного уравнения
+void solveQuadratic(long double a, long double b, long double c) {
+    // проверка на случай, когда все коэффициенты равны нулю
+    if (a == 0 && b == 0 && c == 0) {
+        cout << "Все комплексные числа удовлетворяют уравнению." << endl;
+        return;
+    }
+
+    // Проверка на случай, когда a = 0, b = 0, но c != 0
+    if (a == 0 && b == 0 && c != 0) {
+        cout << "Ни одно комплексное число не удовлетворяет уравнению." << endl;
+        return;
+    }
+
+    // обработка переполнения и машинных нулей: если коэффициенты слишком большие или маленькие, нормализуем их
+    long double scale = max(abs(a), max(abs(b), abs(c)));
+    if (scale > numeric_limits<long double>::max() / 10 || scale < numeric_limits<long double>::min() * 10) {
+        a /= scale;
+        b /= scale;
+        c /= scale;
+    }
+
+    // если a == 0, уравнение становится линейным
+    if (a == 0) {
+        if (b != 0) {
+            cout << fixed << setprecision(11); // точность до 11 знаков
+            cout << "Уравнение линейное. Корень: x = " << -c / b << endl;
+        }
+        else {
+            cout << "Некорректное уравнение." << endl;
+        }
+        return;
+    }
+
+    // вычисление дискриминанта
+    long double discriminant = b * b - 4 * a * c;
+
+    // Если чувствительное уравнение
+    // Если дискриминант отрицательный, корни комплексные
+    if (discriminant < 0) {
+        long double realPart = -b / (2 * a);
+        long double imaginaryPart = sqrt(-discriminant) / (2 * a);
+        cout << fixed << setprecision(11); // Устанавливаем точность до 11 знаков
+        cout << "Корни комплексные: " << endl;
+        cout << "x1 = " << realPart << " + " << imaginaryPart << "i" << endl;
+        cout << "x2 = " << realPart << " - " << imaginaryPart << "i" << endl;
+        return;
+    }
+
+    // численно устойчивый способ вычисления корней
+    // использование знака b для минимизации потери точности
+    long double sqrtDiscriminant = sqrt(discriminant);
+    long double x1, x2;
+
+    if (b >= 0) {
+        x1 = (-b - sqrtDiscriminant) / (2 * a); // минимизация ошибок округления
+        x2 = c / (a * x1); // второй корень через соотношение
+    }
+    else {
+        x1 = (-b + sqrtDiscriminant) / (2 * a); // минимизация ошибок округления
+        x2 = c / (a * x1); // второй корень через соотношение
+    }
+
+    // находятся ли корни в допустимых пределах
+    // определение границ для чисел с плавающей точкой
+    long double lowerBound = numeric_limits<long double>::min();
+    long double upperBound = numeric_limits<long double>::max();
+
+    cout << fixed << setprecision(11); // устанавливаем точность до 11 знаков
+    if (abs(x1) < lowerBound || abs(x1) > upperBound) {
+        cout << "Корень x1 выходит за пределы допустимого диапазона." << endl;
+    }
+    else {
+        cout << "Корень x1 = " << x1 << endl;
+    }
+
+    if (abs(x2) < lowerBound || abs(x2) > upperBound) {
+        cout << "Корень x2 выходит за пределы допустимого диапазона." << endl;
+    }
+    else {
+        cout << "Корень x2 = " << x2 << endl;
+    }
+}
+
+int main() {
+    setlocale(LC_ALL, "Russian");
+    cout << "Введите коэффициенты a, b, c для уравнения ax^2 + bx + c = 0:" << endl;
+    long double a, b, c;
+    cin >> a >> b >> c;
+
+    solveQuadratic(a, b, c);
+
+    return 0;
+}
