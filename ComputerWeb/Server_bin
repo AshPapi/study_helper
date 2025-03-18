@@ -1,0 +1,71 @@
+#include <fstream>
+#include <iostream>
+#include <thread>
+#include <chrono>
+#include <vector>
+
+using namespace std;
+
+string filename = "C:\\Users\\Admin\\source\\repos\\data.bin";  // путь к бинарному файлу
+string lastContent = "";  // Для проверки изменений 
+
+vector<int> readNumbersFromFile(const string& filename) {
+    ifstream file(filename, ios::binary);
+    vector<int> numbers;
+
+    if (!file) {
+        cout << "Файла нет или ошибка открытия бинарного файла!" << endl;
+        return numbers;
+    }
+
+    // Читаем размер вектора
+    size_t size;
+    file.read(reinterpret_cast<char*>(&size), sizeof(size_t));
+    if (file.eof() || size == 0) {
+        file.close();
+        return numbers;  // Если файл пуст или ошибка, возвращаем пустой вектор
+    }
+
+    // Выделяем память и читаем числа
+    numbers.resize(size);
+    file.read(reinterpret_cast<char*>(numbers.data()), sizeof(int) * size);
+    file.close();
+
+    return numbers;
+}
+
+// считаем среднее
+double calculateAverage(const vector<int>& numbers) {
+    if (numbers.empty()) return 0.0;
+    double sum = 0;
+    for (int num : numbers) sum += num;
+    return sum / numbers.size();
+}
+
+int main() {
+    setlocale(LC_ALL, "rus");
+
+    cout << "Сервер запущен и следит за изменением файла..." << endl;
+
+    while (true) {
+        this_thread::sleep_for(chrono::seconds(5)); // Пауза перед следующей проверкой
+
+        vector<int> numbers = readNumbersFromFile(filename);
+        if (numbers.empty()) {
+            continue;  // Если нет данных или файл не изменился, продолжаем ждать
+        }
+
+        cout << "\nФайл обновлён!" << endl;
+        double avg = calculateAverage(numbers);
+        cout << "Средний балл: " << avg << endl;
+
+        if (avg > 4.5) {
+            cout << "Студент получает стипендию!" << endl;
+        }
+        else {
+            cout << "Стипендия не положена." << endl;
+        }
+    }
+
+    return 0;
+}
