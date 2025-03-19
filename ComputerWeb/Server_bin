@@ -3,6 +3,7 @@
 #include <thread>
 #include <chrono>
 #include <vector>
+#include <sstream>
 
 using namespace std;
 
@@ -51,6 +52,13 @@ void writeResultToFile(double avg, const string& result) {
     resFile.close();
 }
 
+// Функция для преобразования числа в строку без to_string
+string intToString(int num) {
+    stringstream ss;
+    ss << num;
+    return ss.str();
+}
+
 int main() {
     setlocale(LC_ALL, "rus");
 
@@ -68,7 +76,9 @@ int main() {
 
         // Формируем строку текущих данных для сравнения
         string currentContent;
-        for (int num : numbers) currentContent += to_string(num) + " ";
+        for (int num : numbers) {
+            currentContent += intToString(num) + " ";
+        }
 
         if (currentContent == lastContent) {
             continue;  // Если данные не изменились, пропускаем
