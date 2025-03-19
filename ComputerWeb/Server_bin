@@ -39,13 +39,14 @@ double calculateAverage(const vector<int>& numbers) {
     return sum / numbers.size();
 }
 
-void writeResultToFile(const string& result) {
+void writeResultToFile(double avg, const string& result) {
     ofstream resFile(resultFile);
     if (!resFile) {
         cout << "Ошибка записи в файл результата!" << endl;
         return;
     }
-    resFile << result;
+    resFile << avg << endl;  // Записываем средний балл
+    resFile << result << endl;  // Записываем информацию о стипендии
     resFile.close();
 }
 
@@ -73,7 +74,7 @@ int main() {
             result = "Стипендия не положена.";
         }
 
-        writeResultToFile(result);
+        writeResultToFile(avg, result);
     }
 
     return 0;
