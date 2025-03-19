@@ -8,6 +8,12 @@
 
 using namespace std;
 
+// Структура для студента
+struct Student {
+    string name;           // Имя студента
+    vector<int> grades;    // Оценки студента
+};
+
 int main() {
     setlocale(LC_ALL, "rus");
 
@@ -15,65 +21,74 @@ int main() {
     string resultFile = "C:\\Users\\Admin\\source\\repos\\result.txt"; // Файл с результатом
 
     while (true) {
-        cout << "\nВведите числа через пробел (или 'exit' для выхода): ";
-        string input;
-        getline(cin, input);
+        Student student;
 
-        if (input == "exit") {
+        // Ввод имени студента
+        cout << "\nВведите имя студента (или 'exit' для выхода): ";
+        getline(cin, student.name);
+        if (student.name == "exit") {
             break;
         }
 
-        // Парсим введённые числа
-        vector<int> numbers;
+        // Ввод оценок студента
+        cout << "Введите оценки через пробел для " << student.name << ": ";
+        string input;
+        getline(cin, input);
+
         stringstream ss(input);
         string temp;
         while (ss >> temp) {
             try {
-                numbers.push_back(stoi(temp));
+                student.grades.push_back(stoi(temp));
             }
             catch (...) {
-                cout << "Ошибка преобразования числа!" << endl;
+                cout << "Ошибка преобразования оценки!" << endl;
                 continue;
             }
         }
 
-        if (numbers.empty()) {
-            cout << "Нет валидных чисел для записи!" << endl;
+        if (student.grades.empty()) {
+            cout << "Нет валидных оценок для записи!" << endl;
             continue;
         }
 
-        // Открываем бинарный файл в режиме добавления
+        // Запись данных студента в бинарный файл
         ofstream file(filename, ios::binary | ios::app);
         if (!file) {
             cout << "Ошибка открытия бинарного файла!" << endl;
             return 1;
         }
 
-        // Записываем размер новой порции данных и сами данные
-        size_t size = numbers.size();
-        file.write(reinterpret_cast<char*>(&size), sizeof(size_t));
-        file.write(reinterpret_cast<char*>(numbers.data()), sizeof(int) * numbers.size());
+        // Записываем длину имени и само имя
+        size_t nameLength = student.name.length();
+        file.write(reinterpret_cast<char*>(&nameLength), sizeof(size_t));
+        file.write(student.name.c_str(), nameLength);
+
+        // Записываем количество оценок и сами оценки
+        size_t gradesSize = student.grades.size();
+        file.write(reinterpret_cast<char*>(&gradesSize), sizeof(size_t));
+        file.write(reinterpret_cast<char*>(student.grades.data()), sizeof(int) * gradesSize);
         file.close();
 
-        cout << "Данные отправлены серверу, ждём результат..." << endl;
+        cout << "Данные студента " << student.name << " отправлены серверу, ждём результат..." << endl;
 
-        // Ожидаем нового результата от сервера
-        string lastResult = ""; // Для отслеживания последнего прочитанного результата
+        // Ожидаем результата от сервера
+        string lastResult = "";
         while (true) {
             this_thread::sleep_for(chrono::seconds(1));
 
             ifstream resFile(resultFile);
             if (resFile) {
                 string avg, scholarship;
-                getline(resFile, avg);  // Читаем средний балл
-                getline(resFile, scholarship);  // Читаем сообщение о стипендии
+                getline(resFile, avg);
+                getline(resFile, scholarship);
                 resFile.close();
 
                 string currentResult = avg + "\n" + scholarship;
-                if (currentResult != lastResult) { // Проверяем, новый ли результат
-                    cout << "Средний балл: " << avg << endl;
+                if (currentResult != lastResult) {
+                    cout << "Средний балл для " << student.name << ": " << avg << endl;
                     cout << "Ответ от сервера: " << scholarship << endl;
-                    lastResult = currentResult; // Обновляем последний результат
+                    lastResult = currentResult;
                     remove(resultFile.c_str()); // Удаляем файл после чтения
                     break;
                 }
