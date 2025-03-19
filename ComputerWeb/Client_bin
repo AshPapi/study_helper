@@ -11,8 +11,8 @@ using namespace std;
 int main() {
     setlocale(LC_ALL, "rus");
 
-    string filename = "C:\\Users\\Admin\\source\\repos\\data.bin";  // Бинарный файл
-    string resultFile = "C:\\Users\\Admin\\source\\repos\\result.txt"; // Файл с результатом
+    string filename = "C:\\Users\\Admin\\source\\repos\\data.bin";  // Бинарный файл для данных
+    string resultFile = "C:\\Users\\Admin\\source\\repos\\result.txt"; // Файл с результатом от сервера
 
     while (true) {
         cout << "\nВведите числа через пробел (или 'exit' для выхода): ";
@@ -42,14 +42,14 @@ int main() {
             continue;
         }
 
-        // Открываем бинарный файл в режиме ДОПИСИ
+        // Открываем бинарный файл в режиме добавления
         ofstream file(filename, ios::binary | ios::app);
         if (!file) {
             cout << "Ошибка открытия бинарного файла!" << endl;
             return 1;
         }
 
-        // Записываем размер новой порции данных
+        // Записываем размер новой порции данных и сами данные
         size_t size = numbers.size();
         file.write(reinterpret_cast<char*>(&size), sizeof(size_t));
         file.write(reinterpret_cast<char*>(numbers.data()), sizeof(int) * numbers.size());
@@ -57,7 +57,7 @@ int main() {
 
         cout << "Данные отправлены серверу, ждём результат..." << endl;
 
-        // Ожидаем появления результата от сервера
+        // Ожидаем результата от сервера
         while (true) {
             this_thread::sleep_for(chrono::seconds(1));
 
