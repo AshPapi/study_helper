@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 #include <sstream>
+#include <thread>
+#include <chrono>
 
 using namespace std;
 
@@ -10,7 +12,7 @@ int main() {
     setlocale(LC_ALL, "rus");
 
     string filename = "C:\\Users\\Admin\\source\\repos\\data.bin";  // Бинарный файл для данных
-    string logFilename = "C:\\Users\\Admin\\source\\repos\\log.txt"; // Лог-файл
+    string resultFile = "C:\\Users\\Admin\\source\\repos\\result.txt"; // Файл с результатом от сервера
 
     while (true) {
         cout << "\nВведите числа через пробел (или 'exit' для выхода): ";
@@ -40,8 +42,8 @@ int main() {
             continue;
         }
 
-        // Открываем бинарный файл в режиме ДОПИСИ (ios::app мешает бинарной записи, поэтому ios::ate)
-        ofstream file(filename, ios::binary | ios::ate | ios::out | ios::in);
+        // Открываем бинарный файл в режиме ДОПИСИ
+        ofstream file(filename, ios::binary | ios::app);
         if (!file) {
             cout << "Ошибка открытия бинарного файла!" << endl;
             return 1;
@@ -53,46 +55,21 @@ int main() {
         file.write(reinterpret_cast<char*>(numbers.data()), sizeof(int) * numbers.size());
         file.close();
 
-        // Логируем данные в текстовый файл
-        ofstream logFile(logFilename, ios::app);
-        if (!logFile) {
-            return 1;
-        }
-        logFile << input << endl;
-        logFile.close();
+        cout << "Данные отправлены серверу, ждём результат..." << endl;
 
-        cout << "Данные записаны в бинарный файл!" << endl;
+        // Ожидаем появления результата от сервера
+        while (true) {
+            this_thread::sleep_for(chrono::seconds(1));
 
-        // Клиент читает данные и получает информацию о стипендии
-        ifstream readFile(filename, ios::binary);
-        if (!readFile) {
-            cout << "Ошибка чтения бинарного файла!" << endl;
-            return 1;
-        }
+            ifstream resFile(resultFile);
+            if (resFile) {
+                string result;
+                getline(resFile, result);
+                resFile.close();
 
-        vector<int> allNumbers;
-        while (!readFile.eof()) {
-            size_t blockSize;
-            readFile.read(reinterpret_cast<char*>(&blockSize), sizeof(size_t));
-            if (readFile.eof()) break;
-
-            vector<int> block(blockSize);
-            readFile.read(reinterpret_cast<char*>(block.data()), sizeof(int) * blockSize);
-            allNumbers.insert(allNumbers.end(), block.begin(), block.end());
-        }
-        readFile.close();
-
-        // Подсчёт среднего балла
-        double sum = 0;
-        for (int num : allNumbers) sum += num;
-        double avg = allNumbers.empty() ? 0 : sum / allNumbers.size();
-
-        cout << "Средний балл: " << avg << endl;
-        if (avg > 4.5) {
-            cout << "Студент получает стипендию!" << endl;
-        }
-        else {
-            cout << "Стипендия не положена." << endl;
+                cout << "Ответ от сервера: " << result << endl;
+                break;
+            }
         }
     }
 
