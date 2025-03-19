@@ -7,6 +7,7 @@
 using namespace std;
 
 string filename = "C:\\Users\\Admin\\source\\repos\\data.bin";  // Путь к бинарному файлу
+string resultFile = "C:\\Users\\Admin\\source\\repos\\result.txt"; // Файл для передачи результата клиенту
 
 vector<int> readNumbersFromFile(const string& filename) {
     ifstream file(filename, ios::binary);
@@ -38,10 +39,20 @@ double calculateAverage(const vector<int>& numbers) {
     return sum / numbers.size();
 }
 
+void writeResultToFile(const string& result) {
+    ofstream resFile(resultFile);
+    if (!resFile) {
+        cout << "Ошибка записи в файл результата!" << endl;
+        return;
+    }
+    resFile << result;
+    resFile.close();
+}
+
 int main() {
     setlocale(LC_ALL, "rus");
 
-    cout << "Сервер запущен и следит за изменением файла..." << endl;
+    cout << "Сервер запущен и следит за изменениями в файле..." << endl;
 
     while (true) {
         this_thread::sleep_for(chrono::seconds(5));  // Проверка каждые 5 секунд
@@ -55,12 +66,14 @@ int main() {
         double avg = calculateAverage(numbers);
         cout << "Средний балл: " << avg << endl;
 
+        string result;
         if (avg > 4.5) {
-            cout << "Студент получает стипендию!" << endl;
+            result = "Студент получает стипендию!";
+        } else {
+            result = "Стипендия не положена.";
         }
-        else {
-            cout << "Стипендия не положена." << endl;
-        }
+
+        writeResultToFile(result);
     }
 
     return 0;
