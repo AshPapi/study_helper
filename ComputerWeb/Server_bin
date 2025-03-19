@@ -7,50 +7,45 @@
 
 using namespace std;
 
-// Структура для студента
+// Структура студента
 struct Student {
-    string name;           // Имя студента
-    vector<int> grades;    // Оценки студента
+    string name;
+    vector<int> grades;
 };
 
+// Чтение данных студентов из бинарного файла
 vector<Student> readStudentsFromFile(const string& filename) {
     ifstream file(filename, ios::binary);
     vector<Student> students;
 
     if (!file) {
-        cout << "Ошибка открытия бинарного файла!" << endl;
+        cout << "Ошибка открытия файла!" << endl;
         return students;
     }
 
-    while (!file.eof()) {
+    while (file.peek() != EOF) { // Проверка на конец файла перед чтением
         Student student;
-
-        // Читаем длину имени и само имя
         size_t nameLength;
-        file.read(reinterpret_cast<char*>(&nameLength), sizeof(size_t));
-        if (file.eof()) break;
 
-        char* nameBuffer = new char[nameLength + 1];
-        file.read(nameBuffer, nameLength);
-        nameBuffer[nameLength] = '\0'; // Добавляем нулевой terminator
-        student.name = string(nameBuffer);
-        delete[] nameBuffer;
+        if (!file.read(reinterpret_cast<char*>(&nameLength), sizeof(size_t))) break;
 
-        // Читаем количество оценок и сами оценки
+        string name(nameLength, '\0');
+        if (!file.read(&name[0], nameLength)) break;
+        student.name = name;
+
         size_t gradesSize;
-        file.read(reinterpret_cast<char*>(&gradesSize), sizeof(size_t));
-        if (file.eof()) break;
+        if (!file.read(reinterpret_cast<char*>(&gradesSize), sizeof(size_t))) break;
 
         student.grades.resize(gradesSize);
-        file.read(reinterpret_cast<char*>(student.grades.data()), sizeof(int) * gradesSize);
+        if (!file.read(reinterpret_cast<char*>(student.grades.data()), sizeof(int) * gradesSize)) break;
 
         students.push_back(student);
     }
 
-    file.close();
     return students;
 }
 
+// Вычисление среднего балла
 double calculateAverage(const vector<int>& grades) {
     if (grades.empty()) return 0.0;
     double sum = 0;
@@ -58,15 +53,14 @@ double calculateAverage(const vector<int>& grades) {
     return sum / grades.size();
 }
 
-void writeResultToFile(double avg, const string& result) {
+// Запись результата в файл
+void writeResultToFile(double avg, const string& result, const string& resultFile) {
     ofstream resFile(resultFile);
     if (!resFile) {
-        cout << "Ошибка записи в файл результата!" << endl;
+        cout << "Ошибка записи в файл!" << endl;
         return;
     }
-    resFile << avg << endl;
-    resFile << result << endl;
-    resFile.close();
+    resFile << avg << endl << result << endl;
 }
 
 // Преобразование числа в строку
@@ -79,22 +73,19 @@ string intToString(int num) {
 int main() {
     setlocale(LC_ALL, "rus");
 
-    string filename = "C:\\Users\\Admin\\source\\repos\\data.bin";  // Путь к бинарному файлу
-    string resultFile = "C:\\Users\\Admin\\source\\repos\\result.txt"; // Файл для результата
+    string filename = "C:\\Users\\Admin\\source\\repos\\data.bin";
+    string resultFile = "C:\\Users\\Admin\\source\\repos\\result.txt";
 
-    cout << "Сервер запущен и следит за изменениями в файле..." << endl;
+    cout << "Сервер запущен..." << endl;
 
-    string lastContent = ""; // Для проверки изменений
+    string lastContent;
 
     while (true) {
         this_thread::sleep_for(chrono::seconds(5));
 
         vector<Student> students = readStudentsFromFile(filename);
-        if (students.empty()) {
-            continue;
-        }
+        if (students.empty()) continue;
 
-        // Формируем строку для сравнения изменений
         string currentContent;
         for (const auto& student : students) {
             currentContent += student.name + ":";
@@ -103,26 +94,17 @@ int main() {
             }
         }
 
-        if (currentContent == lastContent) {
-            continue;
-        }
+        if (currentContent == lastContent) continue;
 
-        // Обрабатываем последнего студента (новые данные)
         const Student& lastStudent = students.back();
         cout << "\nФайл обновлён! Студент: " << lastStudent.name << endl;
         double avg = calculateAverage(lastStudent.grades);
         cout << "Средний балл: " << avg << endl;
 
-        string result;
-        if (avg > 4.5) {
-            result = "Студент получает стипендию!";
-            cout << result << endl;
-        } else {
-            result = "Стипендия не положена.";
-            cout << result << endl;
-        }
+        string result = (avg > 4.5) ? "Студент получает стипендию!" : "Стипендия не положена.";
+        cout << result << endl;
 
-        writeResultToFile(avg, result);
+        writeResultToFile(avg, result, resultFile);
         lastContent = currentContent;
     }
 
