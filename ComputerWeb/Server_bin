@@ -6,35 +6,31 @@
 
 using namespace std;
 
-string filename = "C:\\Users\\Admin\\source\\repos\\data.bin";  // путь к бинарному файлу
-string lastContent = "";  // Для проверки изменений 
+string filename = "C:\\Users\\Admin\\source\\repos\\data.bin";  // Путь к бинарному файлу
 
 vector<int> readNumbersFromFile(const string& filename) {
     ifstream file(filename, ios::binary);
     vector<int> numbers;
 
     if (!file) {
-        cout << "Файла нет или ошибка открытия бинарного файла!" << endl;
+        cout << "Ошибка открытия бинарного файла!" << endl;
         return numbers;
     }
 
-    // Читаем размер вектора
-    size_t size;
-    file.read(reinterpret_cast<char*>(&size), sizeof(size_t));
-    if (file.eof() || size == 0) {
-        file.close();
-        return numbers;  // Если файл пуст или ошибка, возвращаем пустой вектор
+    while (!file.eof()) {
+        size_t size;
+        file.read(reinterpret_cast<char*>(&size), sizeof(size_t));
+        if (file.eof()) break;
+
+        vector<int> block(size);
+        file.read(reinterpret_cast<char*>(block.data()), sizeof(int) * size);
+        numbers.insert(numbers.end(), block.begin(), block.end());
     }
 
-    // Выделяем память и читаем числа
-    numbers.resize(size);
-    file.read(reinterpret_cast<char*>(numbers.data()), sizeof(int) * size);
     file.close();
-
     return numbers;
 }
 
-// считаем среднее
 double calculateAverage(const vector<int>& numbers) {
     if (numbers.empty()) return 0.0;
     double sum = 0;
@@ -48,11 +44,11 @@ int main() {
     cout << "Сервер запущен и следит за изменением файла..." << endl;
 
     while (true) {
-        this_thread::sleep_for(chrono::seconds(5)); // Пауза перед следующей проверкой
+        this_thread::sleep_for(chrono::seconds(5));  // Проверка каждые 5 секунд
 
         vector<int> numbers = readNumbersFromFile(filename);
         if (numbers.empty()) {
-            continue;  // Если нет данных или файл не изменился, продолжаем ждать
+            continue;  // Если нет данных, продолжаем ждать
         }
 
         cout << "\nФайл обновлён!" << endl;
