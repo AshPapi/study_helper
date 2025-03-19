@@ -8,17 +8,17 @@
 
 using namespace std;
 
-// Структура для студента
+// Структура студента
 struct Student {
-    string name;           // Имя студента
-    vector<int> grades;    // Оценки студента
+    string name;
+    vector<int> grades;
 };
 
 int main() {
     setlocale(LC_ALL, "rus");
 
-    string filename = "C:\\Users\\Admin\\source\\repos\\data.bin";  // Бинарный файл
-    string resultFile = "C:\\Users\\Admin\\source\\repos\\result.txt"; // Файл с результатом
+    string filename = "C:\\Users\\Admin\\source\\repos\\data.bin";
+    string resultFile = "C:\\Users\\Admin\\source\\repos\\result.txt";
 
     while (true) {
         Student student;
@@ -26,25 +26,21 @@ int main() {
         // Ввод имени студента
         cout << "\nВведите имя студента (или 'exit' для выхода): ";
         getline(cin, student.name);
-        if (student.name == "exit") {
-            break;
-        }
+        if (student.name == "exit") break;
 
-        // Ввод оценок студента
-        cout << "Введите оценки через пробел для " << student.name << ": ";
+        // Ввод оценок
+        cout << "Введите оценки через пробел: ";
         string input;
         getline(cin, input);
 
         stringstream ss(input);
-        string temp;
-        while (ss >> temp) {
-            try {
-                student.grades.push_back(stoi(temp));
-            }
-            catch (...) {
-                cout << "Ошибка преобразования оценки!" << endl;
+        int grade;
+        while (ss >> grade) {
+            if (grade < 1 || grade > 5) {
+                cout << "Ошибка: оценки должны быть от 1 до 5!" << endl;
                 continue;
             }
+            student.grades.push_back(grade);
         }
 
         if (student.grades.empty()) {
@@ -52,28 +48,26 @@ int main() {
             continue;
         }
 
-        // Запись данных студента в бинарный файл
+        // Запись в бинарный файл
         ofstream file(filename, ios::binary | ios::app);
         if (!file) {
-            cout << "Ошибка открытия бинарного файла!" << endl;
+            cout << "Ошибка записи в файл!" << endl;
             return 1;
         }
 
-        // Записываем длину имени и само имя
         size_t nameLength = student.name.length();
         file.write(reinterpret_cast<char*>(&nameLength), sizeof(size_t));
         file.write(student.name.c_str(), nameLength);
 
-        // Записываем количество оценок и сами оценки
         size_t gradesSize = student.grades.size();
         file.write(reinterpret_cast<char*>(&gradesSize), sizeof(size_t));
         file.write(reinterpret_cast<char*>(student.grades.data()), sizeof(int) * gradesSize);
         file.close();
 
-        cout << "Данные студента " << student.name << " отправлены серверу, ждём результат..." << endl;
+        cout << "Данные отправлены, ждём результат..." << endl;
 
-        // Ожидаем результата от сервера
-        string lastResult = "";
+        // Ожидание результата
+        string lastResult;
         while (true) {
             this_thread::sleep_for(chrono::seconds(1));
 
@@ -86,10 +80,9 @@ int main() {
 
                 string currentResult = avg + "\n" + scholarship;
                 if (currentResult != lastResult) {
-                    cout << "Средний балл для " << student.name << ": " << avg << endl;
+                    cout << "Средний балл: " << avg << endl;
                     cout << "Ответ от сервера: " << scholarship << endl;
-                    lastResult = currentResult;
-                    remove(resultFile.c_str()); // Удаляем файл после чтения
+                    ofstream(resultFile, ios::trunc).close(); // Очищаем файл
                     break;
                 }
             }
