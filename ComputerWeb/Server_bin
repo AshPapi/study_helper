@@ -6,8 +6,9 @@
 
 using namespace std;
 
-string filename = "C:\\Users\\Admin\\source\\repos\\data.bin";  // путь к бинарному файлу
-string lastContent = "";  // Для проверки изменений 
+string filename = "C:\\Users\\Admin\\source\\repos\\data.bin";  // Путь к бинарному файлу
+string resultFilename = "C:\\Users\\Admin\\source\\repos\\result.bin"; // Файл для результата
+string lastContent = "";  // Для проверки изменений
 
 vector<int> readNumbersFromFile(const string& filename) {
     ifstream file(filename, ios::binary);
@@ -34,7 +35,7 @@ vector<int> readNumbersFromFile(const string& filename) {
     return numbers;
 }
 
-// считаем среднее
+// Считаем среднее
 double calculateAverage(const vector<int>& numbers) {
     if (numbers.empty()) return 0.0;
     double sum = 0;
@@ -52,19 +53,38 @@ int main() {
 
         vector<int> numbers = readNumbersFromFile(filename);
         if (numbers.empty()) {
-            continue;  // Если нет данных или файл не изменился, продолжаем ждать
+            continue;  // Если нет данных, продолжаем ждать
+        }
+
+        string currentContent;
+        for (int num : numbers) currentContent += to_string(num) + " ";
+        if (currentContent == lastContent) {
+            continue;  // Если данные не изменились, пропускаем
         }
 
         cout << "\nФайл обновлён!" << endl;
         double avg = calculateAverage(numbers);
-        cout << "Средний балл: " << avg << endl;
+        bool hasScholarship = avg > 4.5;
 
-        if (avg > 4.5) {
+        // Записываем результат в файл result.bin
+        ofstream resultFile(resultFilename, ios::binary);
+        if (!resultFile) {
+            cout << "Ошибка создания файла результата!" << endl;
+            continue;
+        }
+        resultFile.write(reinterpret_cast<char*>(&avg), sizeof(double));
+        resultFile.write(reinterpret_cast<char*>(&hasScholarship), sizeof(bool));
+        resultFile.close();
+
+        cout << "Средний балл: " << avg << endl;
+        if (hasScholarship) {
             cout << "Студент получает стипендию!" << endl;
         }
         else {
             cout << "Стипендия не положена." << endl;
         }
+
+        lastContent = currentContent; // Обновляем последние данные
     }
 
     return 0;
