@@ -9,59 +9,86 @@ using namespace std;
 int main() {
     setlocale(LC_ALL, "rus");
 
-    string filename = "C:\\Users\\Admin\\source\\repos\\data.bin";  // бинарный файл для сервера
-    string logFilename = "C:\\Users\\Admin\\source\\repos\\log.txt"; // для логов
+    string filename = "C:\\Users\\Admin\\source\\repos\\data.bin";  // Бинарный файл для данных
+    string logFilename = "C:\\Users\\Admin\\source\\repos\\log.txt"; // Для логов
+    string resultFilename = "C:\\Users\\Admin\\source\\repos\\result.bin"; // Файл с результатом от сервера
 
-    while (true) {  
+    string lastInput = ""; // Для проверки изменений введённых данных
+
+    while (true) {
         cout << "\nВведите числа через пробел (или 'exit' для выхода): ";
         string input;
         getline(cin, input);
 
         if (input == "exit") {
-            break;  
+            break;
         }
 
-        // Парсим введённые числа
-        vector<int> numbers;
-        stringstream ss(input);
-        string temp;
-        while (ss >> temp) {
-            try {
-                numbers.push_back(stoi(temp));
+        if (input == lastInput) {
+            cout << "Данные не изменились, повторная запись не требуется." << endl;
+        }
+        else {
+            // Парсим введённые числа
+            vector<int> numbers;
+            stringstream ss(input);
+            string temp;
+            while (ss >> temp) {
+                try {
+                    numbers.push_back(stoi(temp));
+                }
+                catch (...) {
+                    cout << "Ошибка преобразования числа!" << endl;
+                    continue;
+                }
             }
-            catch (...) {
-                cout << "Ошибка преобразования числа!" << endl;
+
+            if (numbers.empty()) {
+                cout << "Нет валидных чисел для записи!" << endl;
                 continue;
             }
+
+            // Открываем бинарный файл для записи
+            ofstream file(filename, ios::binary);
+            if (!file) {
+                cout << "Файла нет или ошибка открытия бинарного файла!" << endl;
+                return 1;
+            }
+
+            // Записываем размер вектора и сам вектор в бинарном виде
+            size_t size = numbers.size();
+            file.write(reinterpret_cast<char*>(&size), sizeof(size_t));
+            file.write(reinterpret_cast<char*>(numbers.data()), sizeof(int) * numbers.size());
+            file.close();
+
+            // Логируем данные в текстовом формате
+            ofstream logFile(logFilename, ios::app); // Режим добавления
+            if (!logFile) {
+                return 1;
+            }
+            logFile << input << endl;
+            logFile.close();
+
+            cout << "Данные записаны в бинарный файл! Ожидание ответа от сервера..." << endl;
+            lastInput = input; // Сохраняем последние введённые данные
         }
 
-        if (numbers.empty()) {
-            cout << "Нет валидных чисел для записи!" << endl;
-            continue;
+        // Читаем результат от сервера
+        ifstream resultFile(resultFilename, ios::binary);
+        if (resultFile) {
+            double avg;
+            bool hasScholarship;
+            resultFile.read(reinterpret_cast<char*>(&avg), sizeof(double));
+            resultFile.read(reinterpret_cast<char*>(&hasScholarship), sizeof(bool));
+            resultFile.close();
+
+            cout << "Средний балл: " << avg << endl;
+            if (hasScholarship) {
+                cout << "Студент получает стипендию!" << endl;
+            }
+            else {
+                cout << "Стипендия не положена." << endl;
+            }
         }
-
-        // открываем бинарный файл для записи
-        ofstream file(filename, ios::binary);
-        if (!file) {
-            cout << "Файла нет или ошибка открытия бинарного файла!" << endl;
-            return 1;
-        }
-
-        // Записываем размер вектора и сам вектор в бинарном виде
-        size_t size = numbers.size();
-        file.write(reinterpret_cast<char*>(&size), sizeof(size_t));
-        file.write(reinterpret_cast<char*>(numbers.data()), sizeof(int) * numbers.size());
-        file.close();
-
-        // Логируем данные в текстовом формате
-        ofstream logFile(logFilename, ios::app); // Режим добавления
-        if (!logFile) {
-            return 1;
-        }
-        logFile << input << endl;
-        logFile.close();
-
-        cout << "Данные записаны в бинарный файл! Сервер обработает их." << endl;
     }
 
     return 0;
