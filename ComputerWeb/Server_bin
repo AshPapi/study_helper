@@ -42,7 +42,7 @@ double calculateAverage(const vector<int>& numbers) {
 }
 
 void writeResultToFile(double avg, const string& result) {
-    ofstream resFile(resultFile);
+    ofstream resFile(resultFile); // Перезаписываем файл
     if (!resFile) {
         cout << "Ошибка записи в файл результата!" << endl;
         return;
@@ -52,7 +52,7 @@ void writeResultToFile(double avg, const string& result) {
     resFile.close();
 }
 
-// Функция для преобразования числа в строку без to_string
+// Функция для преобразования числа в строку
 string intToString(int num) {
     stringstream ss;
     ss << num;
