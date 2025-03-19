@@ -18,6 +18,7 @@ vector<int> readNumbersFromFile(const string& filename) {
         return numbers;
     }
 
+    // Читаем все блоки данных из файла
     while (!file.eof()) {
         size_t size;
         file.read(reinterpret_cast<char*>(&size), sizeof(size_t));
@@ -55,12 +56,22 @@ int main() {
 
     cout << "Сервер запущен и следит за изменениями в файле..." << endl;
 
+    string lastContent = ""; // Для проверки изменений в данных
+
     while (true) {
         this_thread::sleep_for(chrono::seconds(5));  // Проверка каждые 5 секунд
 
         vector<int> numbers = readNumbersFromFile(filename);
         if (numbers.empty()) {
             continue;  // Если нет данных, продолжаем ждать
+        }
+
+        // Формируем строку текущих данных для сравнения
+        string currentContent;
+        for (int num : numbers) currentContent += to_string(num) + " ";
+
+        if (currentContent == lastContent) {
+            continue;  // Если данные не изменились, пропускаем
         }
 
         cout << "\nФайл обновлён!" << endl;
@@ -70,11 +81,14 @@ int main() {
         string result;
         if (avg > 4.5) {
             result = "Студент получает стипендию!";
+            cout << result << endl;
         } else {
             result = "Стипендия не положена.";
+            cout << result << endl;
         }
 
         writeResultToFile(avg, result);
+        lastContent = currentContent; // Обновляем последние обработанные данные
     }
 
     return 0;
