@@ -11,8 +11,8 @@ using namespace std;
 int main() {
     setlocale(LC_ALL, "rus");
 
-    string filename = "C:\\Users\\Admin\\source\\repos\\data.bin";  // Бинарный файл для данных
-    string resultFile = "C:\\Users\\Admin\\source\\repos\\result.txt"; // Файл с результатом от сервера
+    string filename = "C:\\Users\\Admin\\source\\repos\\data.bin";  // Бинарный файл
+    string resultFile = "C:\\Users\\Admin\\source\\repos\\result.txt"; // Файл с результатом
 
     while (true) {
         cout << "\nВведите числа через пробел (или 'exit' для выхода): ";
@@ -57,7 +57,8 @@ int main() {
 
         cout << "Данные отправлены серверу, ждём результат..." << endl;
 
-        // Ожидаем результата от сервера
+        // Ожидаем нового результата от сервера
+        string lastResult = ""; // Для отслеживания последнего прочитанного результата
         while (true) {
             this_thread::sleep_for(chrono::seconds(1));
 
@@ -68,9 +69,14 @@ int main() {
                 getline(resFile, scholarship);  // Читаем сообщение о стипендии
                 resFile.close();
 
-                cout << "Средний балл: " << avg << endl;
-                cout << "Ответ от сервера: " << scholarship << endl;
-                break;
+                string currentResult = avg + "\n" + scholarship;
+                if (currentResult != lastResult) { // Проверяем, новый ли результат
+                    cout << "Средний балл: " << avg << endl;
+                    cout << "Ответ от сервера: " << scholarship << endl;
+                    lastResult = currentResult; // Обновляем последний результат
+                    remove(resultFile.c_str()); // Удаляем файл после чтения
+                    break;
+                }
             }
         }
     }
