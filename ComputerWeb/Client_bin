@@ -8,7 +8,6 @@
 
 using namespace std;
 
-// Структура студента
 struct Student {
     string name;
     vector<int> grades;
@@ -16,76 +15,82 @@ struct Student {
 
 int main() {
     setlocale(LC_ALL, "rus");
-
     string filename = "C:\\Users\\Admin\\source\\repos\\data.bin";
-    string resultFile = "C:\\Users\\Admin\\source\\repos\\result.txt";
+    string resultFilename = "C:\\Users\\Admin\\source\\repos\\result.txt";
 
     while (true) {
-        Student student;
-
-        // Ввод имени студента
         cout << "\nВведите имя студента (или 'exit' для выхода): ";
-        getline(cin, student.name);
-        if (student.name == "exit") break;
+        string name;
+        getline(cin, name);
 
-        // Ввод оценок
-        cout << "Введите оценки через пробел: ";
-        string input;
-        getline(cin, input);
-
-        stringstream ss(input);
-        int grade;
-        while (ss >> grade) {
-            if (grade < 1 || grade > 5) {
-                cout << "Ошибка: оценки должны быть от 1 до 5!" << endl;
-                continue;
-            }
-            student.grades.push_back(grade);
+        if (name == "exit") {
+            break;
         }
 
-        if (student.grades.empty()) {
+        cout << "Введите оценки студента через пробел: ";
+        string gradesInput;
+        getline(cin, gradesInput);
+
+        // Парсим оценки
+        vector<int> grades;
+        stringstream ss(gradesInput);
+        string temp;
+        while (ss >> temp) {
+            try {
+                grades.push_back(stoi(temp));
+            }
+            catch (...) {
+                cout << "Ошибка преобразования оценки!" << endl;
+                continue;
+            }
+        }
+
+        if (grades.empty()) {
             cout << "Нет валидных оценок для записи!" << endl;
             continue;
         }
 
-        // Запись в бинарный файл
-        ofstream file(filename, ios::binary | ios::app);
+        // Создаем объект Student
+        Student student = { name, grades };
+
+        // Записываем в бинарный файл
+        ofstream file(filename, ios::binary);
         if (!file) {
-            cout << "Ошибка записи в файл!" << endl;
-            return 1;
+            cout << "Ошибка открытия бинарного файла!" << endl;
+            continue;
         }
 
+        // Записываем имя
         size_t nameLength = student.name.length();
         file.write(reinterpret_cast<char*>(&nameLength), sizeof(size_t));
         file.write(student.name.c_str(), nameLength);
 
+        // Записываем оценки
         size_t gradesSize = student.grades.size();
         file.write(reinterpret_cast<char*>(&gradesSize), sizeof(size_t));
         file.write(reinterpret_cast<char*>(student.grades.data()), sizeof(int) * gradesSize);
         file.close();
 
-        cout << "Данные отправлены, ждём результат..." << endl;
+        cout << "Данные отправлены на сервер. Ожидание ответа..." << endl;
 
-        // Ожидание результата
-        string lastResult;
-        while (true) {
+        // Ждем обработки сервером
+        string result;
+        for (int i = 0; i < 5; i++) { // Ждем максимум 5 секунд
             this_thread::sleep_for(chrono::seconds(1));
 
-            ifstream resFile(resultFile);
-            if (resFile) {
-                string avg, scholarship;
-                getline(resFile, avg);
-                getline(resFile, scholarship);
-                resFile.close();
-
-                string currentResult = avg + "\n" + scholarship;
-                if (currentResult != lastResult) {
-                    cout << "Средний балл: " << avg << endl;
-                    cout << "Ответ от сервера: " << scholarship << endl;
-                    ofstream(resultFile, ios::trunc).close(); // Очищаем файл
-                    break;
-                }
+            ifstream resultFile(resultFilename);
+            if (resultFile) {
+                getline(resultFile, result);
+                resultFile.close();
+                break;
             }
+        }
+
+        if (!result.empty()) {
+            cout << result << endl;
+        }
+        else {
+            cout << "Не удалось получить ответ от сервера!" << endl;
         }
     }
 
