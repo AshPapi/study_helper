@@ -7,17 +7,19 @@
 
 #pragma comment(lib, "ws2_32.lib") // Подключаем библиотеку Winsock
 
-struct Student {           
-    std::string name;      
-    std::vector<int> grades; 
+struct Student {
+    std::string name;
+    std::vector<int> grades;
+    float height;          // Рост студента (в метрах)
+    float weight;          // Вес студента (в килограммах)
 };
 
 int main() {
-    setlocale(LC_ALL, "rus"); 
+    setlocale(LC_ALL, "rus");
 
     // Инициализация Winsock 
     WSADATA wsaData;       // Структура для данных о Winsock
-    WSAStartup(MAKEWORD(2, 2), &wsaData); 
+    WSAStartup(MAKEWORD(2, 2), &wsaData);
 
     // Создаем TCP-сокет для отправки данных серверу
     SOCKET tcpSocket = socket(AF_INET, SOCK_STREAM, 0); // AF_INET - IPv4, SOCK_STREAM - TCP
@@ -26,21 +28,21 @@ int main() {
     sockaddr_in serverAddr; // Структура для адреса сервера
     serverAddr.sin_family = AF_INET; // Используем IPv4
     serverAddr.sin_port = htons(12345); // Порт 12345 
-    inet_pton(AF_INET, "127.0.0.1", &serverAddr.sin_addr); 
+    inet_pton(AF_INET, "127.0.0.1", &serverAddr.sin_addr);
 
     // Создаем UDP-сокет для приема ответа от сервера
     SOCKET udpSocket = socket(AF_INET, SOCK_DGRAM, 0); // SOCK_DGRAM - UDP
 
     // Настраиваем локальный адрес клиента для UDP-сокета
-    sockaddr_in clientAddr; 
+    sockaddr_in clientAddr;
     clientAddr.sin_family = AF_INET; // IPv4
     clientAddr.sin_port = htons(54321); // Локальный порт для приема UDP-ответа
-    clientAddr.sin_addr.s_addr = INADDR_ANY; 
+    clientAddr.sin_addr.s_addr = INADDR_ANY;
     bind(udpSocket, (sockaddr*)&clientAddr, sizeof(clientAddr)); // Привязываем UDP-сокет к порту 54321
 
-    while (true) { 
+    while (true) {
         std::cout << "\nВведите имя студента (или 'exit' для выхода): ";
-        std::string name; 
+        std::string name;
         std::getline(std::cin, name); // Читаем строку с именем
 
         if (name == "exit") break; // Выходим из цикла, если введено "exit"
@@ -50,7 +52,7 @@ int main() {
         std::getline(std::cin, gradesInput); // Читаем строку с оценками
 
         // Парсим оценки из строки в вектор
-        std::vector<int> grades; 
+        std::vector<int> grades;
         std::stringstream ss(gradesInput); // Создаем поток для разбора строки
         std::string temp; // Временная переменная для каждого числа
         while (ss >> temp) { // Читаем числа по одному
@@ -63,10 +65,20 @@ int main() {
             }
         }
 
-        if (grades.empty()) { 
+        if (grades.empty()) {
             std::cout << "Нет валидных оценок для записи!" << std::endl;
             continue;
         }
+
+        std::cout << "Введите рост студента (в метрах, например, 1.75): ";
+        float height;
+        std::cin >> height; // Читаем рост
+        std::cin.ignore(); // Убираем символ новой строки из буфера
+
+        std::cout << "Введите вес студента (в кг, например, 70.5): ";
+        float weight;
+        std::cin >> weight; // Читаем вес
+        std::cin.ignore(); // Убираем символ новой строки из буфера
 
         // Устанавливаем TCP-соединение с сервером
         connect(tcpSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)); // Подключаемся к серверу
@@ -80,11 +92,14 @@ int main() {
         send(tcpSocket, (char*)&gradesSize, sizeof(size_t), 0); // Отправляем количество оценок
         send(tcpSocket, (char*)grades.data(), sizeof(int) * gradesSize, 0); // Отправляем массив оценок
 
+        send(tcpSocket, (char*)&height, sizeof(float), 0); // Отправляем рост
+        send(tcpSocket, (char*)&weight, sizeof(float), 0); // Отправляем вес
+
         // Отправляем UDP-порт, на который сервер должен ответить
-        uint16_t udpPort = 54321; 
+        uint16_t udpPort = 54321;
         send(tcpSocket, (char*)&udpPort, sizeof(uint16_t), 0); // Отправляем порт серверу
 
-        std::cout << "Данные отправлены на сервер через TCP" << std::endl;
+        std::cout << "Данные отправлены на сервер\n" << std::endl ;
 
         // Принимаем UDP-ответ от сервера
         char buffer[1024]; // Буфер для ответа
@@ -93,10 +108,10 @@ int main() {
         int bytesReceived = recvfrom(udpSocket, buffer, 1024, 0, (sockaddr*)&fromAddr, &fromAddrSize); // Получаем данные
         if (bytesReceived > 0) { // Если данные получены
             std::string result(buffer, bytesReceived); // Преобразуем буфер в строку
-            std::cout << "Получен UDP-ответ: " << result << std::endl; // Выводим ответ
+            std::cout << "Получен ответ: " << std::endl << result << std::endl; // Выводим ответ
         }
         else {
-            std::cout << "Не удалось получить UDP-ответ от сервера!" << std::endl; 
+            std::cout << "Не удалось получить UDP-ответ от сервера!" << std::endl;
         }
 
         closesocket(tcpSocket); // Закрываем TCP-сокет после общения
