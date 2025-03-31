@@ -1,68 +1,103 @@
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <iostream>
-#include <string>
+#include <winsock2.h>       
+#include <ws2tcpip.h>       
+#include <iostream>         
+#include <vector>           
+#include <string>           
 
 #pragma comment(lib, "ws2_32.lib") 
+
+struct Student {           
+    std::string name;      
+    std::vector<int> grades;
+};
 
 int main() {
     setlocale(LC_ALL, "rus"); 
 
-    // 1. Инициализация Winsock
-    WSADATA wsaData;
-    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-        std::cerr << "Ошибка инициализации Winsock!" << std::endl;
-        return 1;
-    }
+    // Инициализация Winsock
+    WSADATA wsaData;       
+    WSAStartup(MAKEWORD(2, 2), &wsaData); 
 
-    // 2. Создание сокета для UDP
-    SOCKET serverSocket = socket(AF_INET, SOCK_DGRAM, 0);
-    if (serverSocket == INVALID_SOCKET) {
-        std::cerr << "Ошибка создания сокета!" << std::endl;
-        WSACleanup();
-        return 1;
-    }
+    // Создаем TCP-сокет для приема запросов от клиента
+    SOCKET tcpServerSocket = socket(AF_INET, SOCK_STREAM, 0); // AF_INET — IPv4, SOCK_STREAM — TCP протокол
 
-    // 3. Настройка адреса сервера
-    sockaddr_in serverAddr;
-    serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(12345); // Порт 12345
-    serverAddr.sin_addr.s_addr = INADDR_ANY; // Принимать с любого интерфейса
+    // Настраиваем адрес сервера для TCP-сокета
+    sockaddr_in serverAddr;        // Структура для хранения адреса сервера
+    serverAddr.sin_family = AF_INET; // Указываем, что используем IPv4
+    serverAddr.sin_port = htons(12345); // Порт 12345 
+    serverAddr.sin_addr.s_addr = INADDR_ANY; 
 
-    // Привязка сокета
-    if (bind(serverSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
-        std::cerr << "Ошибка привязки сокета!" << std::endl;
-        closesocket(serverSocket);
-        WSACleanup();
-        return 1;
-    }
+    // Привязываем TCP-сокет к адресу и порту
+    bind(tcpServerSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)); // Связываем сокет с serverAddr
 
-    std::cout << "Сервер запущен и ожидает сообщений..." << std::endl;
+    // Начинаем слушать входящие TCP-соединения
+    listen(tcpServerSocket, SOMAXCONN); // SOMAXCONN — максимальное количество ожидающих подключений
 
-    // 6. Бесконечный цикл обработки сообщений
-    while (true) {
-        char buffer[1024]; // Буфер для данных
-        sockaddr_in clientAddr; // Адрес клиента
-        int clientAddrSize = sizeof(clientAddr);
+    // Создаем UDP-сокет для отправки ответа клиенту
+    SOCKET udpSocket = socket(AF_INET, SOCK_DGRAM, 0); // AF_INET — IPv4, SOCK_DGRAM — UDP протокол
+    // Этот сокет не привязывается к порту, так как он используется только для отправки
 
-        // 4. Получение данных от клиента
-        int bytesReceived = recvfrom(serverSocket, buffer, 1024, 0, (sockaddr*)&clientAddr, &clientAddrSize);
-        if (bytesReceived == SOCKET_ERROR) {
-            std::cerr << "Ошибка получения данных!" << std::endl;
-            continue;
+    std::cout << "Сервер запущен" << std::endl; 
+
+    while (true) { 
+        // Принимаем входящее TCP-соединение от клиента
+        SOCKET clientSocket = accept(tcpServerSocket, nullptr, nullptr); // Создаем новый сокет для общения с клиентом
+        // nullptr для адреса клиента — мы не сохраняем его, так как используем UDP для ответа
+
+        // Читаем данные от клиента через TCP
+        // Сначала получаем длину имени
+        size_t nameLength; 
+        recv(clientSocket, (char*)&nameLength, sizeof(size_t), 0); // Читаем длину имени 
+
+        // Выделяем память под имя и читаем его
+        char* nameBuffer = new char[nameLength + 1]; // +1 для нулевого символа конца строки
+        recv(clientSocket, nameBuffer, nameLength, 0); // Читаем имя в буфер
+        nameBuffer[nameLength] = '\0'; // Добавляем нулевой символ, чтобы сделать строку корректной
+
+ 
+        Student student; 
+        student.name = std::string(nameBuffer); // Преобразуем буфер в строку и сохраняем
+        delete[] nameBuffer; 
+
+        // Получаем количество оценок
+        size_t gradesSize; 
+        recv(clientSocket, (char*)&gradesSize, sizeof(size_t), 0); 
+
+        // Читаем сами оценки
+        student.grades.resize(gradesSize); 
+        recv(clientSocket, (char*)student.grades.data(), sizeof(int) * gradesSize, 0);
+
+        // Получаем UDP-порт клиента, чтобы знать, куда отправить ответ
+        uint16_t clientUdpPort; // Переменная для хранения порта 
+        recv(clientSocket, (char*)&clientUdpPort, sizeof(uint16_t), 0); // Читаем порт из TCP-соединения
+
+        // Выводим информацию о полученных данных для отладки
+        std::cout << "\nПолучены данные:" << std::endl;
+        std::cout << "Студент: " << student.name << std::endl;
+
+        // Формируем эхо-ответ для клиента
+        std::string response = "Эхо сервера: " + student.name; 
+        for (int grade : student.grades) { 
+            response += " " + std::to_string(grade); // Добавляем каждую оценку в строку с пробелом
         }
 
-        // Выводим полученное сообщение
-        std::string message(buffer, bytesReceived);
-        std::cout << "Получено сообщение: " << message << std::endl;
+        // Настраиваем адрес клиента для отправки UDP-ответа
+        sockaddr_in clientAddr; 
+        clientAddr.sin_family = AF_INET; 
+        clientAddr.sin_port = htons(clientUdpPort); // Порт клиента, полученный через TCP (в сетевом порядке)
+        inet_pton(AF_INET, "127.0.0.1", &clientAddr.sin_addr); 
 
-        // 5. Отправка эхо-ответа клиенту
-        sendto(serverSocket, buffer, bytesReceived, 0, (sockaddr*)&clientAddr, clientAddrSize);
-        std::cout << "Эхо-ответ отправлен клиенту." << std::endl;
+        // Отправляем эхо-ответ через UDP
+        sendto(udpSocket, response.c_str(), response.length(), 0, (sockaddr*)&clientAddr, sizeof(clientAddr));
+        // sendto отправляет данные на указанный адрес (clientAddr) через UDP-сокет
+        std::cout << "Ответ отправлен клиенту: " << response << std::endl; // Подтверждаем отправку
+
+        // Закрываем TCP-сокет клиента после обработки запроса
+        closesocket(clientSocket); // Освобождаем ресурсы для этого соединения
     }
 
-    // 7. Завершение работы (в примере не вызывается, так как цикл бесконечный)
-    closesocket(serverSocket);
-    WSACleanup();
+    closesocket(tcpServerSocket); // Закрываем серверный TCP-сокет
+    closesocket(udpSocket); // Закрываем UDP-сокет
+    WSACleanup(); 
     return 0;
 }
