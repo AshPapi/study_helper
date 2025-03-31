@@ -1,0 +1,91 @@
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <iostream>
+#include <vector>
+#include <string>
+#include <sstream>
+
+#pragma comment(lib, "ws2_32.lib")
+
+struct Student {
+    std::string name;
+    std::vector<int> grades;
+};
+
+int main() {
+    setlocale(LC_ALL, "rus");
+
+    // Инициализация Winsock
+    WSADATA wsaData;
+    WSAStartup(MAKEWORD(2, 2), &wsaData);
+
+    // Создание сокета
+    SOCKET clientSocket = socket(AF_INET, SOCK_STREAM, 0);
+    sockaddr_in serverAddr;
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_port = htons(12345); // Порт 12345
+    inet_pton(AF_INET, "127.0.0.1", &serverAddr.sin_addr); // Локальный адрес
+
+    while (true) {
+        std::cout << "\nВведите имя студента (или 'exit' для выхода): ";
+        std::string name;
+        std::getline(std::cin, name);
+
+        if (name == "exit") break;
+
+        std::cout << "Введите оценки студента через пробел: ";
+        std::string gradesInput;
+        std::getline(std::cin, gradesInput);
+
+        // Парсинг оценок
+        std::vector<int> grades;
+        std::stringstream ss(gradesInput);
+        std::string temp;
+        while (ss >> temp) {
+            try {
+                grades.push_back(std::stoi(temp));
+            }
+            catch (...) {
+                std::cout << "Ошибка преобразования оценки!" << std::endl;
+                continue;
+            }
+        }
+
+        if (grades.empty()) {
+            std::cout << "Нет валидных оценок для записи!" << std::endl;
+            continue;
+        }
+
+        // Подключение к серверу
+        connect(clientSocket, (sockaddr*)&serverAddr, sizeof(serverAddr));
+
+        // Отправка данных
+        size_t nameLength = name.length();
+        send(clientSocket, (char*)&nameLength, sizeof(size_t), 0);
+        send(clientSocket, name.c_str(), nameLength, 0);
+
+        size_t gradesSize = grades.size();
+        send(clientSocket, (char*)&gradesSize, sizeof(size_t), 0);
+        send(clientSocket, (char*)grades.data(), sizeof(int) * gradesSize, 0);
+
+        std::cout << "Данные отправлены на сервер. Ожидание ответа..." << std::endl;
+
+        // Получение результата
+        char buffer[1024];
+        int bytesReceived = recv(clientSocket, buffer, 1024, 0);
+        if (bytesReceived > 0) {
+            std::string result(buffer, bytesReceived);
+            std::cout << result << std::endl;
+        }
+        else {
+            std::cout << "Не удалось получить ответ от сервера!" << std::endl;
+        }
+
+        closesocket(clientSocket);
+        clientSocket = socket(AF_INET, SOCK_STREAM, 0); // Создаем новый сокет для следующей итерации
+    }
+
+    closesocket(clientSocket);
+    WSACleanup();
+    return 0;
+}
