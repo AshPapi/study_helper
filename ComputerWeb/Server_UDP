@@ -1,103 +1,106 @@
-#include <winsock2.h>       
-#include <ws2tcpip.h>       
-#include <iostream>         
-#include <vector>           
-#include <string>           
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <iostream>
+#include <vector>
+#include <string>
 
-#pragma comment(lib, "ws2_32.lib") 
+#pragma comment(lib, "ws2_32.lib")
 
-struct Student {           
-    std::string name;      
+struct Student {
+    std::string name;
     std::vector<int> grades;
+    float height;
+    float weight;
 };
 
+double calculateAverage(const std::vector<int>& grades) {
+    if (grades.empty()) return 0.0;
+    double sum = 0;
+    for (int grade : grades) sum += grade;
+    return sum / grades.size();
+}
+
+float calculateBMI(float height, float weight) {
+    return weight / (height * height);
+}
+
 int main() {
-    setlocale(LC_ALL, "rus"); 
+    setlocale(LC_ALL, "rus");
 
-    // Инициализация Winsock
-    WSADATA wsaData;       
-    WSAStartup(MAKEWORD(2, 2), &wsaData); 
+    WSADATA wsaData;
+    WSAStartup(MAKEWORD(2, 2), &wsaData);
 
-    // Создаем TCP-сокет для приема запросов от клиента
-    SOCKET tcpServerSocket = socket(AF_INET, SOCK_STREAM, 0); // AF_INET — IPv4, SOCK_STREAM — TCP протокол
+    SOCKET tcpServerSocket = socket(AF_INET, SOCK_STREAM, 0);
+    sockaddr_in serverAddr;
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_port = htons(12345);
+    serverAddr.sin_addr.s_addr = INADDR_ANY;
 
-    // Настраиваем адрес сервера для TCP-сокета
-    sockaddr_in serverAddr;        // Структура для хранения адреса сервера
-    serverAddr.sin_family = AF_INET; // Указываем, что используем IPv4
-    serverAddr.sin_port = htons(12345); // Порт 12345 
-    serverAddr.sin_addr.s_addr = INADDR_ANY; 
+    bind(tcpServerSocket, (sockaddr*)&serverAddr, sizeof(serverAddr));
+    listen(tcpServerSocket, SOMAXCONN);
 
-    // Привязываем TCP-сокет к адресу и порту
-    bind(tcpServerSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)); // Связываем сокет с serverAddr
+    SOCKET udpSocket = socket(AF_INET, SOCK_DGRAM, 0);
 
-    // Начинаем слушать входящие TCP-соединения
-    listen(tcpServerSocket, SOMAXCONN); // SOMAXCONN — максимальное количество ожидающих подключений
+    std::cout << "Сервер запущен" << std::endl;
 
-    // Создаем UDP-сокет для отправки ответа клиенту
-    SOCKET udpSocket = socket(AF_INET, SOCK_DGRAM, 0); // AF_INET — IPv4, SOCK_DGRAM — UDP протокол
-    // Этот сокет не привязывается к порту, так как он используется только для отправки
+    while (true) {
+        SOCKET clientSocket = accept(tcpServerSocket, nullptr, nullptr);
 
-    std::cout << "Сервер запущен" << std::endl; 
+        size_t nameLength;
+        recv(clientSocket, (char*)&nameLength, sizeof(size_t), 0);
 
-    while (true) { 
-        // Принимаем входящее TCP-соединение от клиента
-        SOCKET clientSocket = accept(tcpServerSocket, nullptr, nullptr); // Создаем новый сокет для общения с клиентом
-        // nullptr для адреса клиента — мы не сохраняем его, так как используем UDP для ответа
+        char* nameBuffer = new char[nameLength + 1];
+        recv(clientSocket, nameBuffer, nameLength, 0);
+        nameBuffer[nameLength] = '\0';
 
-        // Читаем данные от клиента через TCP
-        // Сначала получаем длину имени
-        size_t nameLength; 
-        recv(clientSocket, (char*)&nameLength, sizeof(size_t), 0); // Читаем длину имени 
+        Student student;
+        student.name = std::string(nameBuffer);
+        delete[] nameBuffer;
 
-        // Выделяем память под имя и читаем его
-        char* nameBuffer = new char[nameLength + 1]; // +1 для нулевого символа конца строки
-        recv(clientSocket, nameBuffer, nameLength, 0); // Читаем имя в буфер
-        nameBuffer[nameLength] = '\0'; // Добавляем нулевой символ, чтобы сделать строку корректной
+        size_t gradesSize;
+        recv(clientSocket, (char*)&gradesSize, sizeof(size_t), 0);
 
- 
-        Student student; 
-        student.name = std::string(nameBuffer); // Преобразуем буфер в строку и сохраняем
-        delete[] nameBuffer; 
-
-        // Получаем количество оценок
-        size_t gradesSize; 
-        recv(clientSocket, (char*)&gradesSize, sizeof(size_t), 0); 
-
-        // Читаем сами оценки
-        student.grades.resize(gradesSize); 
+        student.grades.resize(gradesSize);
         recv(clientSocket, (char*)student.grades.data(), sizeof(int) * gradesSize, 0);
 
-        // Получаем UDP-порт клиента, чтобы знать, куда отправить ответ
-        uint16_t clientUdpPort; // Переменная для хранения порта 
-        recv(clientSocket, (char*)&clientUdpPort, sizeof(uint16_t), 0); // Читаем порт из TCP-соединения
+        recv(clientSocket, (char*)&student.height, sizeof(float), 0);
+        recv(clientSocket, (char*)&student.weight, sizeof(float), 0);
 
-        // Выводим информацию о полученных данных для отладки
-        std::cout << "\nПолучены данные:" << std::endl;
-        std::cout << "Студент: " << student.name << std::endl;
+        uint16_t clientUdpPort;
+        recv(clientSocket, (char*)&clientUdpPort, sizeof(uint16_t), 0);
 
-        // Формируем эхо-ответ для клиента
-        std::string response = "Эхо сервера: " + student.name; 
-        for (int grade : student.grades) { 
-            response += " " + std::to_string(grade); // Добавляем каждую оценку в строку с пробелом
+        std::cout << "\nПолучены данные от клиента:" << std::endl;
+        std::cout << "Имя: " << student.name << std::endl;
+        std::cout << "Оценки: ";
+        for (int grade : student.grades) {
+            std::cout << grade << " ";
         }
+        std::cout << std::endl;
+        std::cout << "Рост: " << student.height << " м" << std::endl;
+        std::cout << "Вес: " << student.weight << " кг" << std::endl;
 
-        // Настраиваем адрес клиента для отправки UDP-ответа
-        sockaddr_in clientAddr; 
-        clientAddr.sin_family = AF_INET; 
-        clientAddr.sin_port = htons(clientUdpPort); // Порт клиента, полученный через TCP (в сетевом порядке)
-        inet_pton(AF_INET, "127.0.0.1", &clientAddr.sin_addr); 
+        double avgGrade = calculateAverage(student.grades);
+        float bmi = calculateBMI(student.height, student.weight);
 
-        // Отправляем эхо-ответ через UDP
+        std::string response = "Имя: " + student.name;
+        response += "\nСредний балл: " + std::to_string(avgGrade);
+        response += avgGrade >= 4.0 ? " (стипендия положена)" : " (стипендия не положена)";
+        response += "\nИМТ: " + std::to_string(bmi);
+        response += (bmi >= 18.5 && bmi <= 24.9) ? " (норма)" : (bmi < 18.5 ? " (недостаток веса)" : " (избыток веса)");
+
+        sockaddr_in clientAddr;
+        clientAddr.sin_family = AF_INET;
+        clientAddr.sin_port = htons(clientUdpPort);
+        inet_pton(AF_INET, "127.0.0.1", &clientAddr.sin_addr);
+
         sendto(udpSocket, response.c_str(), response.length(), 0, (sockaddr*)&clientAddr, sizeof(clientAddr));
-        // sendto отправляет данные на указанный адрес (clientAddr) через UDP-сокет
-        std::cout << "Ответ отправлен клиенту: " << response << std::endl; // Подтверждаем отправку
+        std::cout << "\nОтвет отправлен клиенту:\n" << response << "\n" << std::endl;
 
-        // Закрываем TCP-сокет клиента после обработки запроса
-        closesocket(clientSocket); // Освобождаем ресурсы для этого соединения
+        closesocket(clientSocket);
     }
 
-    closesocket(tcpServerSocket); // Закрываем серверный TCP-сокет
-    closesocket(udpSocket); // Закрываем UDP-сокет
-    WSACleanup(); 
+    closesocket(tcpServerSocket);
+    closesocket(udpSocket);
+    WSACleanup();
     return 0;
 }
