@@ -1,0 +1,90 @@
+#include <iostream>
+#include <string>
+#include <cmath>
+#include <cctype>  //для isspace и isdigit
+using namespace std;
+
+//пропуск пробелов в строке
+void skipSpace(const string& input, size_t& pos) {
+    while (pos < input.length() && isspace(input[pos])) {
+        pos++;
+    }
+}
+
+//проверка вещественного числа
+bool parseReal(const string& input, size_t& pos) {
+    skipSpace(input, pos);  //пропуск пробелов
+    if (pos < input.length() && input[pos] == '-') {
+        pos++; // пропускаем -
+    }
+    bool hasDigits = false;
+
+    while (pos < input.length() && isdigit(input[pos])) {
+        pos++;
+        hasDigits = true;
+    }
+
+    if (!hasDigits) return false; //нет цифр
+
+    if (pos >= input.length() || input[pos] != '.') return false; //нет точки
+
+    pos++; // пропуск точки
+    hasDigits = false;
+
+    while (pos < input.length() && isdigit(input[pos])) {
+        pos++;
+        hasDigits = true;
+    }
+    if (!hasDigits) return false; // нет точки
+
+    return true;
+}
+
+
+//рекурсивная функиця для парсинга и вычисления схемы Горнера
+bool parseHornerScheme(const string& input, size_t& pos) {
+    skipSpace(input, pos);  //пропуск пробелов
+
+    if (!parseReal(input, pos)) return false;
+
+    skipSpace(input, pos);
+
+    if (pos >= input.length()) return true; //конец строки - успех
+
+    //ожидаем +х*
+    if (input[pos] != '+') return false;
+    pos++; //пропуск плюса
+    skipSpace(input, pos);
+
+    if (pos >= input.length() || input[pos] != 'x') return false;
+    pos++;
+    skipSpace(input, pos);
+
+    if (pos >= input.length() || input[pos] != '*') return false;
+    pos++;
+    skipSpace(input, pos);
+
+    if (pos >= input.length() || input[pos] != '(') return false;
+    pos++;
+
+    //рекурсивно парсим внутреннию часть
+
+    if (!parseHornerScheme(input, pos)) return false;
+    skipSpace(input, pos);
+
+    if (pos >= input.length() || input[pos] != ')') return false;
+    pos++;
+
+    return true;
+}
+
+
+bool isHornerScheme(const string& input) {
+
+
+}
+
+int main()
+{
+    
+}
