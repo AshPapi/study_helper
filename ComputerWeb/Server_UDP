@@ -1,0 +1,61 @@
+#include <iostream>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
+
+#pragma comment(lib, "ws2_32.lib")
+
+using namespace std;
+
+int main() {
+    setlocale(LC_ALL, "rus");
+    WSADATA wsaData;
+    WSAStartup(MAKEWORD(2, 2), &wsaData);  // Инициализация Winsock
+
+    SOCKET serverSock = socket(AF_INET, SOCK_DGRAM, 0);  // Создание UDP-сокета
+    if (serverSock == INVALID_SOCKET) {
+        cerr << "Ошибка создания сокета" << endl;
+        WSACleanup();
+        return 1;
+    }
+
+    sockaddr_in serverAddr{};
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_port = htons(12345);  // Порт для прослушивания
+    serverAddr.sin_addr.s_addr = INADDR_ANY;  // Принимаем сообщения с любых адресов
+
+    // Привязка сокета к адресу и порту
+    if (bind(serverSock, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
+        cerr << "Ошибка привязки сокета" << endl;
+        closesocket(serverSock);
+        WSACleanup();
+        return 1;
+    }
+
+    cout << "Сервер запущен, ожидает сообщения..." << endl;
+
+    while (true) {
+        char buffer[1024] = { 0 };  // Буфер для получения данных
+        sockaddr_in clientAddr{};
+        int clientSize = sizeof(clientAddr);
+
+        // Получаем сообщение от клиента
+        int bytesReceived = recvfrom(serverSock, buffer, sizeof(buffer), 0, (sockaddr*)&clientAddr, &clientSize);
+        if (bytesReceived == SOCKET_ERROR) {
+            cerr << "Ошибка получения данных" << endl;
+            continue;
+        }
+
+        cout << "Получено сообщение: " << buffer << endl;
+
+        // Отправка обратно того же сообщения
+        int bytesSent = sendto(serverSock, buffer, bytesReceived, 0, (sockaddr*)&clientAddr, clientSize);
+        if (bytesSent == SOCKET_ERROR) {
+            cerr << "Ошибка отправки данных" << endl;
+        }
+    }
+
+    closesocket(serverSock);
+    WSACleanup();
+    return 0;
+}
