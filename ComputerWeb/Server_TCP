@@ -5,36 +5,37 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <windows.h>
-
 #pragma comment(lib, "ws2_32.lib")
-
 using namespace std;
 
 struct Student {
-    string name;
-    string group;
-    int height;
-    int weight;
-    vector<int> grades;
+    string name;      
+    string group;    
+    int height;       
+    int weight;       
+    vector<int> grades;  
 };
 
+// Функция для вычисления индекса массы тела 
 double calculateBMI(int height, int weight) {
-    double heightMeters = height / 100.0;
-    return weight / (heightMeters * heightMeters);
+    double heightMeters = height / 100.0;  
+    return weight / (heightMeters * heightMeters);  
 }
 
+// Функция для вычисления среднего балла
 double calculateAverage(const vector<int>& grades) {
-    if (grades.empty()) return 0.0;
+    if (grades.empty()) return 0.0;  // Если оценок нет, возвращаем 0
     double sum = 0;
-    for (int grade : grades) sum += grade;
-    return sum / grades.size();
+    for (int grade : grades) sum += grade;  // Суммируем все оценки
+    return sum / grades.size();  // Возвращаем среднее значение
 }
 
 int main() {
-    setlocale(LC_ALL, "rus");
+    setlocale(LC_ALL, "rus");  
     WSADATA wsaData;
-    WSAStartup(MAKEWORD(2, 2), &wsaData);
+    WSAStartup(MAKEWORD(2, 2), &wsaData);  // Инициализация Winsock
 
+    // Создание серверного сокета
     SOCKET serverSock = socket(AF_INET, SOCK_STREAM, 0);
     if (serverSock == INVALID_SOCKET) {
         cerr << "Ошибка создания сокета" << endl;
@@ -42,11 +43,13 @@ int main() {
         return 1;
     }
 
+    // Настройка адреса и порта сервера
     sockaddr_in serverAddr{};
     serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(12345);
-    serverAddr.sin_addr.s_addr = INADDR_ANY;
+    serverAddr.sin_port = htons(12345);  // Порт 
+    serverAddr.sin_addr.s_addr = INADDR_ANY;  // Принимаем соединения с любых адресов
 
+    // Привязка сокета к адресу и порту
     if (bind(serverSock, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
         cerr << "Ошибка привязки сокета" << endl;
         closesocket(serverSock);
@@ -54,6 +57,7 @@ int main() {
         return 1;
     }
 
+    // Прослушивание порта
     if (listen(serverSock, 5) == SOCKET_ERROR) {
         cerr << "Ошибка прослушивания порта" << endl;
         closesocket(serverSock);
@@ -63,9 +67,11 @@ int main() {
 
     cout << "Сервер запущен, ожидает подключения..." << endl;
 
+    // Цикл обработки подключений
     while (true) {
         sockaddr_in clientAddr;
         int clientSize = sizeof(clientAddr);
+        // Принятие соединения с клиентом
         SOCKET clientSock = accept(serverSock, (sockaddr*)&clientAddr, &clientSize);
 
         if (clientSock == INVALID_SOCKET) {
@@ -76,19 +82,19 @@ int main() {
         cout << "Клиент подключен! Пока он работает, другие клиенты ждут." << endl;
 
         while (true) {
-            char buffer[1024] = {0};
-            int bytesReceived = recv(clientSock, buffer, 1024, 0);
+            char buffer[1024] = { 0 };  // Буфер для получения данных
+            int bytesReceived = recv(clientSock, buffer, 1024, 0);  // Получение данных от клиента
             if (bytesReceived <= 0) {
                 cout << "Клиент отключился. Ожидание нового клиента..." << endl;
-                break;
+                break; 
             }
 
-            stringstream dataStream(buffer);
+            stringstream dataStream(buffer);  // Поток для обработки полученных данных
             Student student;
             dataStream >> student.name >> student.group >> student.height >> student.weight;
             int grade;
             while (dataStream >> grade) {
-                student.grades.push_back(grade);
+                student.grades.push_back(grade);  // Считываем все оценки
             }
 
             cout << "\nПолучены данные:\n";
@@ -102,6 +108,7 @@ int main() {
 
             double bmi = calculateBMI(student.height, student.weight);
             double avg = calculateAverage(student.grades);
+
             stringstream result;
             result << "Имя: " << student.name << "\n";
             result << "Группа: " << student.group << "\n";
@@ -113,12 +120,15 @@ int main() {
 
             cout << "Рассчитано:\n" << result.str() << endl;
 
+            // Отправка ответа клиенту
             send(clientSock, result.str().c_str(), result.str().size(), 0);
         }
 
+        // Закрытие соединения с клиентом
         closesocket(clientSock);
     }
 
+    // Закрытие серверного сокета и завершение работы Winsock
     closesocket(serverSock);
     WSACleanup();
     return 0;
