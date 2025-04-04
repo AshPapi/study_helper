@@ -1,125 +1,89 @@
-#include <winsock2.h>       // Библиотека для работы с сокетами в Windows
-#include <ws2tcpip.h>       // Дополнительные функции для TCP/IP
-#include <iostream>         
-#include <vector>           
-#include <string>           
-#include <sstream>          // Для парсинга строки с оценками
+#include <iostream>
+#include <vector>
+#include <string>
+#include <sstream>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
 
-#pragma comment(lib, "ws2_32.lib") // Подключаем библиотеку Winsock
+#pragma comment(lib, "ws2_32.lib")
 
-struct Student {
-    std::string name;
-    std::vector<int> grades;
-    float height;          // Рост студента (в метрах)
-    float weight;          // Вес студента (в килограммах)
-};
+using namespace std;
 
 int main() {
     setlocale(LC_ALL, "rus");
-
-    // Инициализация Winsock 
-    WSADATA wsaData;       // Структура для данных о Winsock
+    WSADATA wsaData;
     WSAStartup(MAKEWORD(2, 2), &wsaData);
 
-    // Создаем TCP-сокет для отправки данных серверу
-    SOCKET tcpSocket = socket(AF_INET, SOCK_STREAM, 0); // AF_INET - IPv4, SOCK_STREAM - TCP
-
-    // Настраиваем адрес сервера для TCP-соединения
-    sockaddr_in serverAddr; // Структура для адреса сервера
-    serverAddr.sin_family = AF_INET; // Используем IPv4
-    serverAddr.sin_port = htons(12345); // Порт 12345 
-    inet_pton(AF_INET, "127.0.0.1", &serverAddr.sin_addr);
-
-    // Создаем UDP-сокет для приема ответа от сервера
-    SOCKET udpSocket = socket(AF_INET, SOCK_DGRAM, 0); // SOCK_DGRAM - UDP
-
-    // Настраиваем локальный адрес клиента для UDP-сокета
-    sockaddr_in clientAddr;
-    clientAddr.sin_family = AF_INET; // IPv4
-    clientAddr.sin_port = htons(54321); // Локальный порт для приема UDP-ответа
-    clientAddr.sin_addr.s_addr = INADDR_ANY;
-    bind(udpSocket, (sockaddr*)&clientAddr, sizeof(clientAddr)); // Привязываем UDP-сокет к порту 54321
-
-    while (true) {
-        std::cout << "\nВведите имя студента (или 'exit' для выхода): ";
-        std::string name;
-        std::getline(std::cin, name); // Читаем строку с именем
-
-        if (name == "exit") break; // Выходим из цикла, если введено "exit"
-
-        std::cout << "Введите оценки студента через пробел: ";
-        std::string gradesInput; // Строка для ввода оценок
-        std::getline(std::cin, gradesInput); // Читаем строку с оценками
-
-        // Парсим оценки из строки в вектор
-        std::vector<int> grades;
-        std::stringstream ss(gradesInput); // Создаем поток для разбора строки
-        std::string temp; // Временная переменная для каждого числа
-        while (ss >> temp) { // Читаем числа по одному
-            try {
-                grades.push_back(std::stoi(temp)); // Преобразуем строку в int и добавляем в вектор
-            }
-            catch (...) {
-                std::cout << "Ошибка преобразования оценки!" << std::endl; // Ошибка, если строка не число
-                continue;
-            }
-        }
-
-        if (grades.empty()) {
-            std::cout << "Нет валидных оценок для записи!" << std::endl;
-            continue;
-        }
-
-        std::cout << "Введите рост студента (в метрах, например, 1.75): ";
-        float height;
-        std::cin >> height; // Читаем рост
-        std::cin.ignore(); // Убираем символ новой строки из буфера
-
-        std::cout << "Введите вес студента (в кг, например, 70.5): ";
-        float weight;
-        std::cin >> weight; // Читаем вес
-        std::cin.ignore(); // Убираем символ новой строки из буфера
-
-        // Устанавливаем TCP-соединение с сервером
-        connect(tcpSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)); // Подключаемся к серверу
-
-        // Отправляем данные через TCP
-        size_t nameLength = name.length(); // Длина имени
-        send(tcpSocket, (char*)&nameLength, sizeof(size_t), 0); // Отправляем длину имени
-        send(tcpSocket, name.c_str(), nameLength, 0); // Отправляем само имя
-
-        size_t gradesSize = grades.size(); // Количество оценок
-        send(tcpSocket, (char*)&gradesSize, sizeof(size_t), 0); // Отправляем количество оценок
-        send(tcpSocket, (char*)grades.data(), sizeof(int) * gradesSize, 0); // Отправляем массив оценок
-
-        send(tcpSocket, (char*)&height, sizeof(float), 0); // Отправляем рост
-        send(tcpSocket, (char*)&weight, sizeof(float), 0); // Отправляем вес
-
-        // Отправляем UDP-порт, на который сервер должен ответить
-        uint16_t udpPort = 54321;
-        send(tcpSocket, (char*)&udpPort, sizeof(uint16_t), 0); // Отправляем порт серверу
-
-        std::cout << "Данные отправлены на сервер\n" << std::endl ;
-
-        // Принимаем UDP-ответ от сервера
-        char buffer[1024]; // Буфер для ответа
-        sockaddr_in fromAddr; // Адрес сервера
-        int fromAddrSize = sizeof(fromAddr); // Размер структуры адреса
-        int bytesReceived = recvfrom(udpSocket, buffer, 1024, 0, (sockaddr*)&fromAddr, &fromAddrSize); // Получаем данные
-        if (bytesReceived > 0) { // Если данные получены
-            std::string result(buffer, bytesReceived); // Преобразуем буфер в строку
-            std::cout << "Получен ответ: " << std::endl << result << std::endl; // Выводим ответ
-        }
-        else {
-            std::cout << "Не удалось получить UDP-ответ от сервера!" << std::endl;
-        }
-
-        closesocket(tcpSocket); // Закрываем TCP-сокет после общения
-        tcpSocket = socket(AF_INET, SOCK_STREAM, 0); // Создаем новый TCP-сокет для следующей итерации
+    SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock == INVALID_SOCKET) {
+        cerr << "Ошибка создания сокета" << endl;
+        WSACleanup();
+        return 1;
     }
 
-    closesocket(tcpSocket); // Закрываем TCP-сокет при выходе
-    closesocket(udpSocket); // Закрываем UDP-сокет при выходе
-    WSACleanup(); // Освобождаем ресурсы Winsock
+    sockaddr_in serverAddr{};
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_port = htons(12345);
+
+    if (inet_pton(AF_INET, "127.0.0.1", &serverAddr.sin_addr) <= 0) {
+        cerr << "Ошибка преобразования IP-адреса" << endl;
+        closesocket(sock);
+        WSACleanup();
+        return 1;
+    }
+
+    if (connect(sock, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
+        cerr << "Ошибка подключения к серверу" << endl;
+        closesocket(sock);
+        WSACleanup();
+        return 1;
+    }
+
+    while (true) {
+        string name, group;
+        int height, weight;
+        vector<int> grades;
+
+        cout << "Введите имя (или 'exit' для выхода): ";
+        getline(cin, name);
+        if (name == "exit") break;
+
+        cout << "Введите группу: ";
+        getline(cin, group);
+
+        cout << "Введите рост (см): ";
+        cin >> height;
+
+        cout << "Введите вес (кг): ";
+        cin >> weight;
+
+        cout << "Введите оценки через пробел: ";
+        string gradesInput;
+        cin.ignore();
+        getline(cin, gradesInput);
+
+        stringstream ss(gradesInput);
+        int grade;
+        while (ss >> grade) {
+            grades.push_back(grade);
+        }
+
+        stringstream dataStream;
+        dataStream << name << " " << group << " " << height << " " << weight;
+        for (int g : grades) {
+            dataStream << " " << g;
+        }
+
+        string data = dataStream.str();
+        send(sock, data.c_str(), data.size(), 0);
+
+        char buffer[1024] = { 0 };
+        recv(sock, buffer, 1024, 0);
+        cout << endl << "Ответ от сервера: " << endl << buffer << endl << endl;
+    }
+
+    closesocket(sock);
+    WSACleanup();
     return 0;
 }
