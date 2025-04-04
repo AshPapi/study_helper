@@ -1,106 +1,125 @@
-#include <winsock2.h>
-#include <ws2tcpip.h>
 #include <iostream>
 #include <vector>
 #include <string>
+#include <sstream>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
 
 #pragma comment(lib, "ws2_32.lib")
 
+using namespace std;
+
 struct Student {
-    std::string name;
-    std::vector<int> grades;
-    float height;
-    float weight;
+    string name;
+    string group;
+    int height;
+    int weight;
+    vector<int> grades;
 };
 
-double calculateAverage(const std::vector<int>& grades) {
+double calculateBMI(int height, int weight) {
+    double heightMeters = height / 100.0;
+    return weight / (heightMeters * heightMeters);
+}
+
+double calculateAverage(const vector<int>& grades) {
     if (grades.empty()) return 0.0;
     double sum = 0;
     for (int grade : grades) sum += grade;
     return sum / grades.size();
 }
 
-float calculateBMI(float height, float weight) {
-    return weight / (height * height);
-}
-
 int main() {
     setlocale(LC_ALL, "rus");
-
     WSADATA wsaData;
     WSAStartup(MAKEWORD(2, 2), &wsaData);
 
-    SOCKET tcpServerSocket = socket(AF_INET, SOCK_STREAM, 0);
-    sockaddr_in serverAddr;
+    SOCKET serverSock = socket(AF_INET, SOCK_STREAM, 0);
+    if (serverSock == INVALID_SOCKET) {
+        cerr << "Ошибка создания сокета" << endl;
+        WSACleanup();
+        return 1;
+    }
+
+    sockaddr_in serverAddr{};
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(12345);
     serverAddr.sin_addr.s_addr = INADDR_ANY;
 
-    bind(tcpServerSocket, (sockaddr*)&serverAddr, sizeof(serverAddr));
-    listen(tcpServerSocket, SOMAXCONN);
-
-    SOCKET udpSocket = socket(AF_INET, SOCK_DGRAM, 0);
-
-    std::cout << "Сервер запущен" << std::endl;
-
-    while (true) {
-        SOCKET clientSocket = accept(tcpServerSocket, nullptr, nullptr);
-
-        size_t nameLength;
-        recv(clientSocket, (char*)&nameLength, sizeof(size_t), 0);
-
-        char* nameBuffer = new char[nameLength + 1];
-        recv(clientSocket, nameBuffer, nameLength, 0);
-        nameBuffer[nameLength] = '\0';
-
-        Student student;
-        student.name = std::string(nameBuffer);
-        delete[] nameBuffer;
-
-        size_t gradesSize;
-        recv(clientSocket, (char*)&gradesSize, sizeof(size_t), 0);
-
-        student.grades.resize(gradesSize);
-        recv(clientSocket, (char*)student.grades.data(), sizeof(int) * gradesSize, 0);
-
-        recv(clientSocket, (char*)&student.height, sizeof(float), 0);
-        recv(clientSocket, (char*)&student.weight, sizeof(float), 0);
-
-        uint16_t clientUdpPort;
-        recv(clientSocket, (char*)&clientUdpPort, sizeof(uint16_t), 0);
-
-        std::cout << "\nПолучены данные от клиента:" << std::endl;
-        std::cout << "Имя: " << student.name << std::endl;
-        std::cout << "Оценки: ";
-        for (int grade : student.grades) {
-            std::cout << grade << " ";
-        }
-        std::cout << std::endl;
-        std::cout << "Рост: " << student.height << " м" << std::endl;
-        std::cout << "Вес: " << student.weight << " кг" << std::endl;
-
-        double avgGrade = calculateAverage(student.grades);
-        float bmi = calculateBMI(student.height, student.weight);
-
-        std::string response = "Имя: " + student.name;
-        response += "\nСредний балл: " + std::to_string(avgGrade);
-        response += avgGrade >= 4.0 ? " (стипендия положена)" : " (стипендия не положена)";
-        response += "\nИМТ: " + std::to_string(bmi);
-        response += (bmi >= 18.5 && bmi <= 24.9) ? " (норма)" : (bmi < 18.5 ? " (недостаток веса)" : " (избыток веса)");
-
-        sockaddr_in clientAddr;
-        clientAddr.sin_family = AF_INET;
-        clientAddr.sin_port = htons(clientUdpPort);
-        inet_pton(AF_INET, "127.0.0.1", &clientAddr.sin_addr);
-
-        sendto(udpSocket, response.c_str(), response.length(), 0, (sockaddr*)&clientAddr, sizeof(clientAddr));
-        std::cout << "\nОтвет отправлен клиенту:\n" << response << "\n" << std::endl;
-
-        closesocket(clientSocket);
+    if (bind(serverSock, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
+        cerr << "Ошибка привязки сокета" << endl;
+        closesocket(serverSock);
+        WSACleanup();
+        return 1;
     }
 
-    closesocket(tcpServerSocket);
-    closesocket(udpSocket);
+    if (listen(serverSock, 5) == SOCKET_ERROR) {
+        cerr << "Ошибка прослушивания порта" << endl;
+        closesocket(serverSock);
+        WSACleanup();
+        return 1;
+    }
+
+    cout << "Сервер запущен, ожидает подключения..." << endl;
+
+    while (true) {
+        sockaddr_in clientAddr;
+        int clientSize = sizeof(clientAddr);
+        SOCKET clientSock = accept(serverSock, (sockaddr*)&clientAddr, &clientSize);
+
+        if (clientSock == INVALID_SOCKET) {
+            cerr << "Ошибка принятия подключения" << endl;
+            continue;
+        }
+
+        cout << "Клиент подключен! Пока он работает, другие клиенты ждут." << endl;
+
+        while (true) {
+            char buffer[1024] = {0};
+            int bytesReceived = recv(clientSock, buffer, 1024, 0);
+            if (bytesReceived <= 0) {
+                cout << "Клиент отключился. Ожидание нового клиента..." << endl;
+                break;
+            }
+
+            stringstream dataStream(buffer);
+            Student student;
+            dataStream >> student.name >> student.group >> student.height >> student.weight;
+            int grade;
+            while (dataStream >> grade) {
+                student.grades.push_back(grade);
+            }
+
+            cout << "\nПолучены данные:\n";
+            cout << "Имя: " << student.name << "\n";
+            cout << "Группа: " << student.group << "\n";
+            cout << "Рост: " << student.height << " см\n";
+            cout << "Вес: " << student.weight << " кг\n";
+            cout << "Оценки: ";
+            for (int g : student.grades) cout << g << " ";
+            cout << "\n";
+
+            double bmi = calculateBMI(student.height, student.weight);
+            double avg = calculateAverage(student.grades);
+            stringstream result;
+            result << "Имя: " << student.name << "\n";
+            result << "Группа: " << student.group << "\n";
+            result << "Рост: " << student.height << " см\n";
+            result << "Вес: " << student.weight << " кг\n";
+            result << "Средний балл: " << avg << "\n";
+            result << "ИМТ: " << bmi << "\n";
+            result << (avg > 4.5 ? "Стипендия назначена!" : "Стипендия не положена.");
+
+            cout << "Рассчитано:\n" << result.str() << endl;
+
+            send(clientSock, result.str().c_str(), result.str().size(), 0);
+        }
+
+        closesocket(clientSock);
+    }
+
+    closesocket(serverSock);
     WSACleanup();
     return 0;
 }
