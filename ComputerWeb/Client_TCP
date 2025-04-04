@@ -5,16 +5,15 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <windows.h>
-
 #pragma comment(lib, "ws2_32.lib")
-
 using namespace std;
 
 int main() {
-    setlocale(LC_ALL, "rus");
+    setlocale(LC_ALL, "rus");  
     WSADATA wsaData;
-    WSAStartup(MAKEWORD(2, 2), &wsaData);
+    WSAStartup(MAKEWORD(2, 2), &wsaData);  // Инициализация Winsock
 
+    // Создание сокета для подключения к серверу
     SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock == INVALID_SOCKET) {
         cerr << "Ошибка создания сокета" << endl;
@@ -22,10 +21,11 @@ int main() {
         return 1;
     }
 
-    sockaddr_in serverAddr{};
+    sockaddr_in serverAddr{};  // Структура для хранения информации о сервере
     serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(12345);
+    serverAddr.sin_port = htons(12345);  // Порт для подключения
 
+    // Преобразование IP-адреса в формат, пригодный для сокета
     if (inet_pton(AF_INET, "127.0.0.1", &serverAddr.sin_addr) <= 0) {
         cerr << "Ошибка преобразования IP-адреса" << endl;
         closesocket(sock);
@@ -33,6 +33,7 @@ int main() {
         return 1;
     }
 
+    // Подключение к серверу
     if (connect(sock, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
         cerr << "Ошибка подключения к серверу" << endl;
         closesocket(sock);
@@ -47,7 +48,7 @@ int main() {
 
         cout << "Введите имя (или 'exit' для выхода): ";
         getline(cin, name);
-        if (name == "exit") break;
+        if (name == "exit") break; 
 
         cout << "Введите группу: ";
         getline(cin, group);
@@ -60,29 +61,32 @@ int main() {
 
         cout << "Введите оценки через пробел: ";
         string gradesInput;
-        cin.ignore();
+        cin.ignore();  // Очищаем буфер перед считыванием строки
         getline(cin, gradesInput);
 
+        // Разбиение строки с оценками на отдельные числа
         stringstream ss(gradesInput);
         int grade;
         while (ss >> grade) {
-            grades.push_back(grade);
+            grades.push_back(grade);  // Добавляем каждую оценку в вектор
         }
 
+        // Формирование строки для отправки на сервер
         stringstream dataStream;
         dataStream << name << " " << group << " " << height << " " << weight;
         for (int g : grades) {
-            dataStream << " " << g;
+            dataStream << " " << g;  // Добавляем все оценки в строку
         }
 
-        string data = dataStream.str();
-        send(sock, data.c_str(), data.size(), 0);
+        string data = dataStream.str();  // Преобразуем данные в строку
+        send(sock, data.c_str(), data.size(), 0);  // Отправляем данные на сервер
 
-        char buffer[1024] = { 0 };
-        recv(sock, buffer, 1024, 0);
+        char buffer[1024] = { 0 };  // Буфер для получения ответа от сервера
+        recv(sock, buffer, 1024, 0);  // Получаем ответ от сервера
         cout << endl << "Ответ от сервера: " << endl << buffer << endl << endl;
     }
 
+    // Закрытие соединения и завершение работы Winsock
     closesocket(sock);
     WSACleanup();
     return 0;
