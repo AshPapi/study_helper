@@ -1,0 +1,79 @@
+#include <iostream>
+#include <string>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#pragma comment(lib, "Ws2_32.lib")
+
+int main() {
+    setlocale(LC_ALL, "rus");
+
+    WSADATA wsaData;
+    SOCKET client_socket;
+    // Хранение адреса сервера
+    struct sockaddr_in server_addr;
+
+    std::string host = "json.org";
+    std::string request =
+        "GET /index.html HTTP/1.1\r\n"
+        "Host: json.org\r\n"
+        "Connection: close\r\n"
+        "\r\n";
+
+    // Инициализация библиотеки Winsock версии 2.2, MAKEWORD(2, 2) задаёт версию Winsock
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+        std::cerr << "Ошибка инициализации Winsock: " << WSAGetLastError() << std::endl;
+        return 1;
+    }
+
+    client_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (client_socket == INVALID_SOCKET) {
+        std::cerr << "Ошибка создания сокета: " << WSAGetLastError() << std::endl;
+        WSACleanup();
+        return 1;
+    }
+
+    // Настраиваем адрес сервера
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(80);
+
+    // Преобразуем IP-адрес из строки в бинарный формат
+    // inet_pton конвертирует строковый IP в структуру sin_addr
+    if (inet_pton(AF_INET, "216.239.38.21", &server_addr.sin_addr) <= 0) {
+        std::cerr << "Некорректный адрес сервера" << std::endl;
+        closesocket(client_socket);
+        WSACleanup();
+        return 1;
+    }
+
+    // Устанавливаем соединение с сервером
+    // Передаём адрес и размер структуры server_addr
+    if (connect(client_socket, (struct sockaddr*)&server_addr, sizeof(server_addr)) == SOCKET_ERROR) {
+        std::cerr << "Ошибка подключения к серверу: " << WSAGetLastError() << std::endl;
+        closesocket(client_socket);
+        WSACleanup();
+        return 1;
+    }
+
+    // Отправляем HTTP-запрос серверу
+    // request.c_str() преобразует std::string в C-строку
+    // request.size() — длина запроса в байтах
+    send(client_socket, request.c_str(), request.size(), 0);
+    std::cout << "Запрос отправлен:\n" << request << std::endl;
+
+    char buffer[1024] = { 0 };          // Буфер для приёма ответа от сервера, размер 1024 байта
+    int bytes_received;                 // Переменная для хранения количества принятых байтов
+    // Читаем, пока есть данные (bytes_received > 0)
+    while ((bytes_received = recv(client_socket, buffer, 1024, 0)) > 0) {
+        // Выводим принятые данные в консоль
+        std::cout.write(buffer, bytes_received);
+    }
+
+    // Проверяем, не было ли ошибки при получении данных
+    if (bytes_received == SOCKET_ERROR) {
+        std::cerr << "Ошибка получения ответа от сервера: " << WSAGetLastError() << std::endl;
+    }
+
+    closesocket(client_socket);
+    WSACleanup();
+    return 0;
+}
