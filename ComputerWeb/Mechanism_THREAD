@@ -1,0 +1,152 @@
+#include <iostream>
+#include <thread>
+#include <vector>
+#include <windows.h>
+#pragma comment(lib, "Ws2_32.lib")
+using namespace std;
+
+int sharedCounter = 0;
+
+// Критические секции
+// Критическая секция используется для того, чтобы гарантировать, что только один поток будет выполнять код внутри секции одновременно.
+CRITICAL_SECTION cs; 
+
+void threadCriticalSection(int id) {
+    for (int i = 0; i < 1000; ++i) {
+        EnterCriticalSection(&cs); // Поток входит в критическую секцию, блокируя доступ другим потокам
+        ++sharedCounter;           
+        LeaveCriticalSection(&cs); // Поток покидает критическую секцию, позволяя другим потокам работать
+    }
+    cout << "Поток критической секции " << id << " завершён\n";
+}
+
+void runCriticalSection() {
+    sharedCounter = 0; 
+    InitializeCriticalSection(&cs); // Инициализация критической секции
+
+    vector<thread> threads;
+    for (int i = 0; i < 5; ++i) {
+        threads.emplace_back(threadCriticalSection, i + 1); // Запуск 5 потоков
+    }
+
+    for (auto& t : threads) t.join(); // Ожидание завершения всех потоков
+    DeleteCriticalSection(&cs); // Освобождение памяти
+
+    cout << "Критические секции: счётчик = " << sharedCounter << endl;
+}
+
+// Мьютексы
+// Мьютекс - это механизм синхронизации, который выстраивает потоки в очередь на вход в критическую секцию.
+HANDLE mutex;
+
+void threadMutex(int id) {
+    for (int i = 0; i < 1000; ++i) {
+        WaitForSingleObject(mutex, INFINITE); // Поток пытается захватить мьютекс
+        ++sharedCounter;                      
+        ReleaseMutex(mutex);                  // Освобождение мьютекса для других потоков
+    }
+    cout << "Поток мьютекса " << id << " завершён\n";
+}
+
+void runMutex() {
+    sharedCounter = 0;
+    mutex = CreateMutex(NULL, FALSE, NULL); // Создание мьютекса (мьютекс не захвачен в начале)
+
+    vector<thread> threads;
+    for (int i = 0; i < 5; ++i) {
+        threads.emplace_back(threadMutex, i + 1); 
+    }
+
+    for (auto& t : threads) t.join(); // Ожидание завершения всех потоков
+    CloseHandle(mutex); // Закрытие мьютекса
+
+    cout << "Мьютексы: счётчик = " << sharedCounter << endl;
+}
+
+// События
+// События позволяют одному потоку сигнализировать другим о том, что они могут продолжить выполнение
+HANDLE eventHandle;  
+CRITICAL_SECTION csEvent; 
+
+void workerThreadEvent(int id) {
+    WaitForSingleObject(eventHandle, INFINITE); // Поток ждёт сигнала от другого потока
+    for (int i = 0; i < 1000; ++i) {
+        EnterCriticalSection(&csEvent);
+        ++sharedCounter;
+        LeaveCriticalSection(&csEvent);
+    }
+    cout << "Поток события " << id << " завершён\n";
+}
+
+void runEvent() {
+    sharedCounter = 0; 
+    eventHandle = CreateEvent(NULL, TRUE, FALSE, NULL); // Создаём событие (состояние сброшено)
+    InitializeCriticalSection(&csEvent);
+
+    vector<thread> threads;
+    for (int i = 0; i < 5; ++i) {
+        threads.emplace_back(workerThreadEvent, i + 1); 
+    }
+
+    Sleep(100); // Даем потокам время начать ожидание события
+    SetEvent(eventHandle); // Сигнал, что потоки могут продолжить работу
+
+    for (auto& t : threads) t.join(); 
+
+    CloseHandle(eventHandle); // Закрытие обработчика события
+    DeleteCriticalSection(&csEvent); 
+
+    cout << "События: счётчик = " << sharedCounter << endl;
+}
+
+// Семафоры
+// Семафор позволяет ограничить количество потоков, которые могут одновременно работать в определенной части программы
+HANDLE semaphore; 
+CRITICAL_SECTION csSemaphore; 
+
+void threadSemaphore(int id) {
+    for (int i = 0; i < 1000; ++i) {
+        WaitForSingleObject(semaphore, INFINITE); // Ждём разрешения на вход в критическую секцию
+        EnterCriticalSection(&csSemaphore);
+        ++sharedCounter;
+        LeaveCriticalSection(&csSemaphore);
+        ReleaseSemaphore(semaphore, 1, NULL); // Освобождаем "слот" в семафоре, позволяя другим потокам войти
+    }
+    cout << "Поток семафора " << id << " завершён\n";
+}
+
+void runSemaphore() {
+    sharedCounter = 0; 
+    semaphore = CreateSemaphore(NULL, 2, 2, NULL); // Создаём семафор с разрешением для 2 потоков
+    InitializeCriticalSection(&csSemaphore); 
+
+    vector<thread> threads;
+    for (int i = 0; i < 5; ++i) {
+        threads.emplace_back(threadSemaphore, i + 1); 
+    }
+
+    for (auto& t : threads) t.join(); 
+
+    CloseHandle(semaphore); // Закрытие семафора
+    DeleteCriticalSection(&csSemaphore); 
+
+    cout << "Семафоры: счётчик = " << sharedCounter << endl;
+}
+
+int main() {
+    setlocale(LC_ALL, "rus"); 
+
+    cout << "Критические секции\n";
+    runCriticalSection();
+
+    cout << "\nМьютексы\n";
+    runMutex();
+
+    cout << "\nСобытия\n";
+    runEvent();
+
+    cout << "\nСемафоры\n";
+    runSemaphore();
+
+    return 0;
+}
