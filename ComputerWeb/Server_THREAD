@@ -1,0 +1,110 @@
+#include <iostream>
+#include <thread>
+#include <vector>
+#include <string>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+
+#pragma comment(lib, "Ws2_32.lib")
+
+using namespace std;
+
+struct Message {
+    int id;
+    char text[256];
+};
+
+// Функция обработки клиента
+void handleClient(SOCKET clientSocket, int clientId) {
+    cout << "Клиент " << clientId << " подключился\n";
+    while (true) {
+        Message msg;
+        // Получение данных
+        int bytesReceived = recv(clientSocket, reinterpret_cast<char*>(&msg), sizeof(Message), 0);
+        if (bytesReceived <= 0) {
+            cout << "Клиент " << clientId << " отключился\n";
+            closesocket(clientSocket);
+            break;
+        }
+
+        // Вывод данных
+        cout << "Клиент " << clientId << ": id = " << msg.id
+            << ", Текст: " << msg.text << endl;
+
+        // Эхо-ответ
+        if (send(clientSocket, reinterpret_cast<char*>(&msg), sizeof(Message), 0) == SOCKET_ERROR) {
+            cerr << "Не удалось отправить ответ клиенту " << clientId
+                << ", ошибка: " << WSAGetLastError() << endl;
+            break;
+        }
+    }
+}
+
+int main() {
+    setlocale(LC_ALL, "rus");
+
+    // Инициализация Winsock
+    WSADATA wsaData;
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+        cerr << "Инициализация Winsock не удалась: " << WSAGetLastError() << endl;
+        return 1;
+    }
+
+    // Создание сокета
+    SOCKET serverSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (serverSocket == INVALID_SOCKET) {
+        cerr << "Не удалось создать сокет: " << WSAGetLastError() << endl;
+        WSACleanup();
+        return 1;
+    }
+
+    // Настройка адреса
+    sockaddr_in serverAddr;
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_addr.s_addr = INADDR_ANY;
+    serverAddr.sin_port = htons(8085);
+
+    // Привязка сокета
+    if (bind(serverSocket, reinterpret_cast<sockaddr*>(&serverAddr), sizeof(serverAddr)) == SOCKET_ERROR) {
+        cerr << "Привязка сокета не удалась: " << WSAGetLastError() << endl;
+        closesocket(serverSocket);
+        WSACleanup();
+        return 1;
+    }
+
+    // Ожидание подключений
+    if (listen(serverSocket, 5) == SOCKET_ERROR) {
+        cerr << "Не удалось начать прослушивание: " << WSAGetLastError() << endl;
+        closesocket(serverSocket);
+        WSACleanup();
+        return 1;
+    }
+
+    cout << "Сервер прослушивает порт 8085.\n";
+
+    vector<thread> threads;
+    int clientId = 0;
+
+    // Принятие клиентов
+    while (true) {
+        sockaddr_in clientAddr;
+        int clientLen = sizeof(clientAddr);
+        SOCKET clientSocket = accept(serverSocket, reinterpret_cast<sockaddr*>(&clientAddr), &clientLen);
+        if (clientSocket == INVALID_SOCKET) {
+            cerr << "Не удалось принять подключение: " << WSAGetLastError() << endl;
+            continue;
+        }
+
+        // Новый поток для клиента
+        threads.emplace_back(handleClient, clientSocket, ++clientId);
+    }
+
+    // Ожидание потоков
+    for (auto& t : threads) {
+        t.join();
+    }
+
+    closesocket(serverSocket);
+    WSACleanup();
+    return 0;
+}
