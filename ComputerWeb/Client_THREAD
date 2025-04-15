@@ -1,0 +1,110 @@
+#include <iostream>
+#include <string>
+#include <winsock2.h>
+#include <windows.h>
+#include <ws2tcpip.h>
+
+#pragma comment(lib, "Ws2_32.lib") 
+
+using namespace std;
+
+struct Message {
+    int id;
+    char text[256];
+};
+
+int main() {
+    SetConsoleCP(1251); 
+    SetConsoleOutputCP(1251);
+    setlocale(LC_ALL, "rus");
+
+    // Инициализация Winsock
+    WSADATA wsaData;
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+        cerr << "Инициализация Winsock не удалась: " << WSAGetLastError() << endl;
+        return 1;
+    }
+
+    // Создание сокета
+    SOCKET clientSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (clientSocket == INVALID_SOCKET) {
+        cerr << "Не удалось создать сокет: " << WSAGetLastError() << endl;
+        WSACleanup();
+        return 1;
+    }
+
+    // Настройка адреса сервера
+    sockaddr_in serverAddr;
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_port = htons(8085);
+    if (inet_pton(AF_INET, "127.0.0.1", &serverAddr.sin_addr) <= 0) {
+        cerr << "Неверный адрес: " << WSAGetLastError() << endl;
+        closesocket(clientSocket);
+        WSACleanup();
+        return 1;
+    }
+
+    // Подключение к серверу
+    if (connect(clientSocket, reinterpret_cast<sockaddr*>(&serverAddr), sizeof(serverAddr)) == SOCKET_ERROR) {
+        cerr << "Подключение не удалось: " << WSAGetLastError() << endl;
+        closesocket(clientSocket);
+        WSACleanup();
+        return 1;
+    }
+
+    cout << "Введите 'exit' для завершения работы.\n";
+
+    while (true) {
+        Message msg;
+        string input;
+
+        // Запрос идентификатора
+        cout << "Введите id сообщения (число): ";
+        getline(cin, input);
+        try {
+            msg.id = stoi(input);
+        }
+        catch (...) {
+            cerr << "Неверный id, введите число\n";
+            continue;
+        }
+
+        // Запрос текста
+        cout << "Введите текст сообщения: ";
+        getline(cin, input);
+
+        if (input == "exit") {
+            break;
+        }
+
+        // Копирование текста
+        strncpy_s(msg.text, sizeof(msg.text), input.c_str(), sizeof(msg.text) - 1);
+        msg.text[sizeof(msg.text) - 1] = '\0';
+
+        // Отправка серверу
+        if (send(clientSocket, reinterpret_cast<char*>(&msg), sizeof(Message), 0) == SOCKET_ERROR) {
+            cerr << "Не удалось отправить сообщение: " << WSAGetLastError() << endl;
+            break;
+        }
+
+        cout << endl;
+        cout << "Отправлено: id = " << msg.id << ", Текст сообщения: " << msg.text << endl;
+
+        // Получение ответа
+        Message response;
+        int bytesReceived = recv(clientSocket, reinterpret_cast<char*>(&response), sizeof(Message), 0);
+        if (bytesReceived <= 0) {
+            cerr << "Сервер отключился: " << WSAGetLastError() << endl;
+            break;
+        }
+
+        cout << "Получено: id = " << response.id << ", Текст сообщения: " << response.text << endl;
+        cout << endl;
+    }
+
+    // Закрытие сокета
+    closesocket(clientSocket);
+    WSACleanup();
+    cout << "Отключено от сервера\n";
+    return 0;
+}
