@@ -187,3 +187,77 @@ FROM
     EMPLOYEES e
 JOIN 
     EMPLOYEES m ON e.MANAGER_ID = m.EMPLOYEE_ID;
+
+
+
+
+
+
+
+
+
+
+MAX(SALARY)
+        FROM 
+            EMPLOYEES
+        GROUP BY 
+            JOB_ID
+    );
+
+
+
+SELECT 
+    e.FIRST_NAME,
+    e.LAST_NAME,
+    e.DEPARTMENT_ID,
+    e.SALARY
+FROM 
+    EMPLOYEES e
+WHERE 
+    (e.DEPARTMENT_ID, e.SALARY) IN (
+        SELECT 
+            DEPARTMENT_ID,
+            MIN(SALARY)
+        FROM 
+            EMPLOYEES
+        GROUP BY 
+            DEPARTMENT_ID
+    );
+
+
+SELECT 
+    e.FIRST_NAME,
+    e.LAST_NAME,
+    e.JOB_ID,
+    e.SALARY,
+    (SELECT AVG(SALARY) FROM EMPLOYEES WHERE JOB_ID = e.JOB_ID) AS job_avg_salary,
+    CASE 
+        WHEN e.SALARY > (SELECT AVG(SALARY) FROM EMPLOYEES WHERE JOB_ID = e.JOB_ID) THEN 'Above Job Average'
+        WHEN e.SALARY < (SELECT AVG(SALARY) FROM EMPLOYEES WHERE JOB_ID = e.JOB_ID) THEN 'Below Job Average'
+        ELSE 'Job Average'
+    END AS salary_level
+FROM 
+    EMPLOYEES e;
+
+
+
+
+SELECT 
+    e.FIRST_NAME,
+    e.LAST_NAME,
+    e.JOB_ID,
+    (SELECT COUNT(*) FROM EMPLOYEES WHERE JOB_ID = e.JOB_ID) AS job_employee_count
+FROM 
+    EMPLOYEES e;
+
+
+
+
+SELECT 
+    e.FIRST_NAME,
+    e.LAST_NAME,
+    e.DEPARTMENT_ID,
+    (SELECT COUNT(*) FROM EMPLOYEES WHERE DEPARTMENT_ID = e.DEPARTMENT_ID) AS department_employee_count,
+    (SELECT MAX(SALARY) FROM EMPLOYEES WHERE DEPARTMENT_ID = e.DEPARTMENT_ID) AS department_max_salary
+FROM 
+    EMPLOYEES e;
