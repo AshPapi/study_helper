@@ -196,7 +196,256 @@ JOIN
 
 
 
+SELECT 
+    FIRST_NAME,
+    LAST_NAME,
+    SALARY,
+    DEPARTMENT_ID,
+    HIRE_DATE
+FROM 
+    EMPLOYEES e
+WHERE 
+    SALARY > (
+        SELECT AVG(SALARY)
+        FROM EMPLOYEES
+        WHERE DEPARTMENT_ID = e.DEPARTMENT_ID
+    )
+    AND HIRE_DATE > TO_DATE('01.01.2015', 'DD.MM.YYYY');
 
+
+SELECT 
+    e.FIRST_NAME,
+    e.LAST_NAME,
+    e.DEPARTMENT_ID
+FROM 
+    EMPLOYEES e
+WHERE 
+    e.DEPARTMENT_ID = (
+        SELECT DEPARTMENT_ID
+        FROM EMPLOYEES
+        GROUP BY DEPARTMENT_ID
+        ORDER BY AVG(SALARY) DESC
+        FETCH FIRST 1 ROW ONLY
+    );
+
+
+SELECT 
+    e.FIRST_NAME,
+    e.LAST_NAME,
+    e.SALARY,
+    e.JOB_ID
+FROM 
+    EMPLOYEES e
+JOIN 
+    JOBS j ON e.JOB_ID = j.JOB_ID
+WHERE 
+    e.SALARY > j.MAX_SALARY * 0.1;
+
+
+
+SELECT 
+    e.FIRST_NAME,
+    e.LAST_NAME,
+    e.SALARY
+FROM 
+    EMPLOYEES e
+WHERE 
+    EXISTS (
+        SELECT 1 
+        FROM EMPLOYEES sub 
+        WHERE sub.MANAGER_ID = e.EMPLOYEE_ID
+    )
+    AND e.SALARY > (
+        SELECT AVG(sub.SALARY)
+        FROM EMPLOYEES sub
+        WHERE sub.MANAGER_ID = e.EMPLOYEE_ID
+    );
+
+
+SELECT 
+    DISTINCT e.FIRST_NAME,
+    e.LAST_NAME,
+    e.DEPARTMENT_ID
+FROM 
+    EMPLOYEES e
+WHERE 
+    e.DEPARTMENT_ID IN (
+        SELECT DISTINCT DEPARTMENT_ID
+        FROM EMPLOYEES
+        WHERE JOB_ID = 'HR_REP'
+    )
+    AND e.SALARY > 5000;
+
+
+
+SELECT 
+    DEPARTMENT_ID
+FROM 
+    EMPLOYEES
+GROUP BY 
+    DEPARTMENT_ID
+HAVING 
+    AVG(SALARY) > (SELECT AVG(SALARY) FROM EMPLOYEES);
+
+
+SELECT 
+    DEPARTMENT_ID,
+    COUNT(EMPLOYEE_ID) AS employee_count
+FROM 
+    EMPLOYEES
+GROUP BY 
+    DEPARTMENT_ID
+HAVING 
+    COUNT(EMPLOYEE_ID) > (
+        SELECT AVG(emp_count)
+        FROM (
+            SELECT 
+                COUNT(EMPLOYEE_ID) AS emp_count
+            FROM 
+                EMPLOYEES
+            GROUP BY 
+                DEPARTMENT_ID
+        )
+    );
+
+
+SELECT 
+    DEPARTMENT_ID,
+    MAX(SALARY) AS max_salary
+FROM 
+    EMPLOYEES
+GROUP BY 
+    DEPARTMENT_ID
+HAVING 
+    MAX(SALARY) > (
+        SELECT MAX(SALARY)
+        FROM EMPLOYEES
+        WHERE DEPARTMENT_ID = 50
+    );
+
+
+SELECT 
+    e.FIRST_NAME,
+    e.LAST_NAME,
+    e.EMPLOYEE_ID
+FROM 
+    EMPLOYEES e
+WHERE 
+    EXISTS (
+        SELECT 1
+        FROM EMPLOYEES sub
+        WHERE sub.MANAGER_ID = e.EMPLOYEE_ID
+          AND sub.SALARY > (SELECT AVG(SALARY) FROM EMPLOYEES)
+    );
+
+
+SELECT 
+    e.FIRST_NAME,
+    e.LAST_NAME,
+    e.EMPLOYEE_ID
+FROM 
+    EMPLOYEES e
+WHERE 
+    e.DEPARTMENT_ID = 60
+    AND EXISTS (
+        SELECT 1
+        FROM EMPLOYEES sub
+        WHERE sub.MANAGER_ID = e.EMPLOYEE_ID
+          AND sub.SALARY > (
+              SELECT AVG(SALARY)
+              FROM EMPLOYEES
+              WHERE JOB_ID = sub.JOB_ID
+          )
+    );
+
+
+SELECT 
+    e.FIRST_NAME,
+    e.LAST_NAME,
+    e.DEPARTMENT_ID
+FROM 
+    EMPLOYEES e
+WHERE 
+    e.DEPARTMENT_ID IN (
+        SELECT 
+            DEPARTMENT_ID
+        FROM 
+            EMPLOYEES
+        GROUP BY 
+            DEPARTMENT_ID
+        HAVING 
+            MIN(SALARY) > 3000
+    );
+
+
+
+SELECT 
+    e.FIRST_NAME,
+    e.LAST_NAME,
+    e.DEPARTMENT_ID
+FROM 
+    EMPLOYEES e
+WHERE 
+    e.JOB_ID = 'SAREP'
+    AND e.DEPARTMENT_ID IN (
+        SELECT DISTINCT DEPARTMENT_ID
+        FROM EMPLOYEES
+        WHERE JOB_ID = 'ITPROG'
+    )
+    AND e.SALARY < (
+        SELECT AVG(SALARY)
+        FROM EMPLOYEES
+        WHERE JOB_ID = 'SA_REP'
+    );
+
+
+SELECT 
+    DEPARTMENT_ID,
+    AVG(SALARY) AS average_salary
+FROM 
+    EMPLOYEES
+GROUP BY 
+    DEPARTMENT_ID
+ORDER BY 
+    average_salary DESC;
+
+
+
+SELECT 
+    JOB_ID,
+    COUNT(*) AS employee_count,
+    MAX(SALARY) AS max_salary
+FROM 
+    EMPLOYEES
+GROUP BY 
+    JOB_ID;
+
+
+SELECT 
+    FIRST_NAME,
+    LAST_NAME,
+    SALARY,
+    CASE 
+        WHEN SALARY > (SELECT AVG(SALARY) FROM EMPLOYEES) THEN 'Above Average'
+        WHEN SALARY < (SELECT AVG(SALARY) FROM EMPLOYEES) THEN 'Below Average'
+        ELSE 'Average'
+    END AS salary_rank
+FROM 
+    EMPLOYEES;
+
+
+
+SELECT 
+    e.FIRST_NAME,
+    e.LAST_NAME,
+    e.JOB_ID,
+    e.SALARY
+FROM 
+    EMPLOYEES e
+WHERE 
+    (e.JOB_ID, e.SALARY) IN (
+        SELECT 
+            JOB_ID,
 MAX(SALARY)
         FROM 
             EMPLOYEES
