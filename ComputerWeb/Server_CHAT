@@ -1,0 +1,154 @@
+// server.cpp
+#define _WINSOCK_DEPRECATED_NO_WARNINGS
+#include <winsock2.h>
+#include <iostream>
+#include <thread>
+#include <vector>
+#include <mutex>
+#include <string>
+#pragma comment(lib, "ws2_32.lib")
+
+constexpr int PORT = 12345;
+constexpr int MAXBUF = 1024;
+enum PACKET : int {
+    PACKET_SET_NICK = 1,
+    PACKET_MESSAGE = 2,
+    PACKET_PRIVATE = 3,
+};
+
+struct Packet {
+    int type;
+    char nick[32];       // для SET_NICK — ник отправителя; для PRIVATE — ник-получателя
+    int dataLen;
+    char data[MAXBUF];   // собственно сообщение
+};
+
+struct Client {
+    SOCKET sock;
+    std::string nick;
+};
+
+std::vector<Client> clients;
+std::mutex clients_mutex;
+
+void broadcast(const Packet& pkt, SOCKET exclude = INVALID_SOCKET) {
+    std::lock_guard<std::mutex> lock(clients_mutex);
+    for (auto& c : clients) {
+        if (c.sock != exclude) {
+            send(c.sock, (char*)&pkt, sizeof(pkt.type) + sizeof(pkt.nick) + sizeof(pkt.dataLen) + pkt.dataLen, 0);
+        }
+    }
+}
+
+void handle_client(Client client) {
+    SOCKET s = client.sock;
+    Packet pkt;
+    // Получаем ник
+    int recvLen = recv(s, (char*)&pkt, sizeof(pkt), 0);
+    if (recvLen <= 0) {
+        closesocket(s);
+        return;
+    }
+    if (pkt.type == PACKET_SET_NICK) {
+        client.nick = pkt.nick;
+        {
+            std::lock_guard<std::mutex> lock(clients_mutex);
+            // обновляем ник в векторе
+            for (auto& c : clients)
+                if (c.sock == s) c.nick = client.nick;
+        }
+        // сообщаем всем о входе
+        std::cout << client.nick << " присоединился.\n";
+        Packet joinPkt{ PACKET_MESSAGE, "", 0, "" };
+        std::string msg = client.nick + " вошёл в чат\n";
+        strcpy_s(joinPkt.data, msg.c_str());
+        joinPkt.dataLen = (int)msg.size();
+        broadcast(joinPkt, INVALID_SOCKET);
+    }
+    // цикл обработки сообщений
+    while (true) {
+        recvLen = recv(s, (char*)&pkt, sizeof(pkt.type) + sizeof(pkt.nick) + sizeof(pkt.dataLen), 0);
+        if (recvLen <= 0) break;
+        // докачаем тело
+        if (pkt.dataLen > 0) {
+            recv(s, pkt.data, pkt.dataLen, 0);
+            pkt.data[pkt.dataLen] = '\0';
+        }
+        if (pkt.type == PACKET_MESSAGE) {
+            // публичное — рассылаем всем
+            std::cout << "[" << client.nick << "]: " << pkt.data << "\n";
+            // подставить свой ник в data
+            Packet out = pkt;
+            strcpy_s(out.nick, client.nick.c_str());
+            broadcast(out, INVALID_SOCKET);
+        }
+        else if (pkt.type == PACKET_PRIVATE) {
+            // приватное — nick поля pkt.nick = получатель
+            std::string target = pkt.nick;
+            bool sent = false;
+            {
+                std::lock_guard<std::mutex> lock(clients_mutex);
+                for (auto& c : clients) {
+                    if (c.nick == target) {
+                        // сформируем пакет отправки
+                        Packet out;
+                        out.type = PACKET_PRIVATE;
+                        strcpy_s(out.nick, client.nick.c_str()); // кто шлёт
+                        out.dataLen = pkt.dataLen;
+                        memcpy(out.data, pkt.data, pkt.dataLen);
+                        send(c.sock, (char*)&out, sizeof(out.type) + sizeof(out.nick) + sizeof(out.dataLen) + out.dataLen, 0);
+                        sent = true;
+                        break;
+                    }
+                }
+            }
+            if (!sent) {
+                // оповестить отправителя, что ник не найден
+                std::string err = "Пользователь " + target + " не найден.\n";
+                send(s, err.c_str(), (int)err.size(), 0);
+            }
+        }
+    }
+    // отключение
+    closesocket(s);
+    {
+        std::lock_guard<std::mutex> lock(clients_mutex);
+        clients.erase(std::remove_if(clients.begin(), clients.end(),
+            [&](const Client& c) { return c.sock == s; }), clients.end());
+    }
+    std::cout << client.nick << " вышел.\n";
+    Packet leavePkt{ PACKET_MESSAGE, "", 0, "" };
+    std::string msg = client.nick + " покинул чат\n";
+    strcpy_s(leavePkt.data, msg.c_str());
+    leavePkt.dataLen = (int)msg.size();
+    broadcast(leavePkt, INVALID_SOCKET);
+}
+
+int main() {
+    setlocale(LC_ALL, "rus");
+    setlocale(LC_ALL, "rus");
+    WSADATA wsa;
+    WSAStartup(MAKEWORD(2, 2), &wsa);
+    SOCKET listenSock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = INADDR_ANY;
+    addr.sin_port = htons(PORT);
+    bind(listenSock, (sockaddr*)&addr, sizeof(addr));
+    listen(listenSock, SOMAXCONN);
+    std::cout << "Порт сервера: " << PORT << "\n";
+
+    while (true) {
+        SOCKET clientSock = accept(listenSock, nullptr, nullptr);
+        {
+            std::lock_guard<std::mutex> lock(clients_mutex);
+            clients.push_back({ clientSock, "" });
+        }
+        std::thread(handle_client, clients.back()).detach();
+    }
+
+    closesocket(listenSock);
+    WSACleanup();
+    return 0;
+}
