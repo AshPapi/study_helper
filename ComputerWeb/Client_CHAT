@@ -1,0 +1,146 @@
+// client.cpp
+#define _WINSOCK_DEPRECATED_NO_WARNINGS
+#include <winsock2.h>
+#include <iostream>
+#include <thread>
+#include <string>
+#pragma comment(lib, "ws2_32.lib")
+
+constexpr int MAXBUF = 1024;
+
+enum PACKET : int {
+    PACKET_SET_NICK = 1,
+    PACKET_MESSAGE = 2,
+    PACKET_PRIVATE = 3,
+};
+
+struct Packet {
+    int  type;
+    char nick[32];
+    int  dataLen;
+    char data[MAXBUF];
+};
+
+static std::string myNick;
+
+void recvThread(SOCKET s) {
+    while (true) {
+        Packet pkt;
+        int headerLen = sizeof(pkt.type) + sizeof(pkt.nick) + sizeof(pkt.dataLen);
+        int len = recv(s, (char*)&pkt, headerLen, 0);
+        if (len <= 0) break;
+        if (pkt.dataLen > 0) {
+            int r = recv(s, pkt.data, pkt.dataLen, 0);
+            if (r <= 0) break;
+        }
+        pkt.data[pkt.dataLen] = '\0';
+
+        if (pkt.type == PACKET_MESSAGE) {
+            std::string sender(pkt.nick);
+            // фильтруем «эхо» собственных сообщений
+            if (!sender.empty() && sender == myNick) continue;
+            if (!sender.empty()) {
+                std::cout << "[" << sender << "]: " << pkt.data;
+            }
+            else {
+                std::cout << pkt.data;  // системные сообщения
+            }
+        }
+        else if (pkt.type == PACKET_PRIVATE) {
+            std::cout << "[Приватное сообщение от " << pkt.nick << "]: " << pkt.data << "\n";
+        }
+    }
+    std::cout << "Соединение закрыто сервером.\n";
+    ExitThread(0);
+}
+
+int main() {
+    setlocale(LC_ALL, "rus");
+    WSADATA wsa;
+    if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
+        std::cerr << "WSAStartup failed\n";
+        return 1;
+    }
+
+    SOCKET s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (s == INVALID_SOCKET) {
+        std::cerr << "Не удалось создать сокет\n";
+        WSACleanup();
+        return 1;
+    }
+
+    sockaddr_in srv{};
+    srv.sin_family = AF_INET;
+    srv.sin_addr.s_addr = inet_addr("127.0.0.1");
+    srv.sin_port = htons(12345);
+
+    if (connect(s, (sockaddr*)&srv, sizeof(srv)) == SOCKET_ERROR) {
+        std::cerr << "Не удалось подключиться к серверу\n";
+        closesocket(s);
+        WSACleanup();
+        return 1;
+    }
+
+    std::cout << "Введите ваш ник: ";
+    std::getline(std::cin, myNick);
+
+    Packet pkt{};
+    pkt.type = PACKET_SET_NICK;
+    strncpy_s(pkt.nick, myNick.c_str(), _TRUNCATE);
+    pkt.dataLen = 0;
+    send(s, (char*)&pkt,
+        sizeof(pkt.type) + sizeof(pkt.nick) + sizeof(pkt.dataLen),
+        0);
+
+    std::cout << "/pm <ник> <текст> — чтобы отправить приватное сообщение\n";
+
+    std::thread(recvThread, s).detach();
+
+    while (true) {
+        std::string line;
+        if (!std::getline(std::cin, line)) break;
+
+        // убираем ведущие пробелы для проверки команды, но в общем сообщении
+        // сами пробелы сохранятся
+        size_t first = line.find_first_not_of(' ');
+        if (first == std::string::npos) continue;  // только пробелы — пропускаем
+        std::string cmd = line.substr(first);
+
+        if (cmd.rfind("/pm ", 0) == 0) {
+            // приватное сообщение
+            auto pos = cmd.find(' ', 4);
+            if (pos == std::string::npos) {
+                std::cout << "Неверный формат. Используйте: /pm <ник> <текст>\n";
+                continue;
+            }
+            std::string target = cmd.substr(4, pos - 4);
+            std::string msg = cmd.substr(pos + 1);
+
+            Packet p{};
+            p.type = PACKET_PRIVATE;
+            strncpy_s(p.nick, target.c_str(), _TRUNCATE);
+            p.dataLen = (int)msg.size();
+            memcpy(p.data, msg.c_str(), p.dataLen);
+
+            send(s, (char*)&p,
+                sizeof(p.type) + sizeof(p.nick) + sizeof(p.dataLen) + p.dataLen,
+                0);
+        }
+        else {
+            // общее сообщение — отправляем всю строку, включая ведущие пробелы
+            std::string msg = line + "\n";
+            Packet p{};
+            p.type = PACKET_MESSAGE;
+            p.dataLen = (int)msg.size();
+            memcpy(p.data, msg.c_str(), p.dataLen);
+
+            send(s, (char*)&p,
+                sizeof(p.type) + sizeof(p.nick) + sizeof(p.dataLen) + p.dataLen,
+                0);
+        }
+    }
+
+    closesocket(s);
+    WSACleanup();
+    return 0;
+}
